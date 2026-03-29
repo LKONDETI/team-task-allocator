@@ -7,7 +7,7 @@ email alerts 24 hours before a deadline.
 Built as a combined ASP.NET Core + React project (single repo, single deployment).
 
 ## Stack
-- Frontend: React (TypeScript) inside /ClientApp — served by ASP.NET Core SPA middleware
+- Frontend: React (TypeScript) inside /frontend — served by ASP.NET Core SPA middleware
 - Backend: .NET 8 Web API (C#)
 - Database: PostgreSQL with Entity Framework Core (Npgsql)
 - Email: SendGrid
@@ -15,19 +15,20 @@ Built as a combined ASP.NET Core + React project (single repo, single deployment
 - No CORS needed — React and API are same origin
 
 ## Project structure
-- /ClientApp — React TypeScript frontend
+- /frontend — React TypeScript frontend
   - /src/pages — Login, ManagerDashboard, EmployeeDashboard
   - /src/components — shared UI components
   - /src/hooks — custom React hooks
   - /src/api — Axios client and API calls
   - /src/context — AuthContext
   - /src/types — TypeScript interfaces
-- /Controllers — .NET API controllers
-- /Services — business logic layer
-- /Repositories — data access layer
-- /Models — Entity Framework models
-- /DTOs — request and response shapes
-- /Migrations — EF Core migrations
+- /backend — ASP.NET Core Web API
+  - /Controllers — .NET API controllers
+  - /Services — business logic layer
+  - /Repositories — data access layer
+  - /Models — Entity Framework models
+  - /DTOs — request and response shapes
+  - /Migrations — EF Core migrations
 - /docs/adr — Architecture Decision Records
 
 ## Agent roster
@@ -89,7 +90,7 @@ Never move to the next task without running testing-expert first.
 - Functional components only, no class components
 - TypeScript strict mode on
 - Hooks for all state and side effects
-- Axios client in /src/api/client.ts — always use this, never fetch directly
+- Axios client in /frontend/src/api/client.ts — always use this, never fetch directly
 - Tailwind for all styling — no inline styles
 - date-fns for all date formatting and calculations
 - FullCalendar for the calendar view

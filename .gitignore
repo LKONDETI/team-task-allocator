@@ -1,0 +1,22 @@
+# ── .NET / ASP.NET Core ───────────────────────────────────────────────────────
+backend/bin/
+backend/obj/
+backend/*.user
+backend/.vs/
+backend/appsettings.Local.json
+
+# ── React / Node ──────────────────────────────────────────────────────────────
+frontend/node_modules/
+frontend/dist/
+frontend/build/
+frontend/.env.local
+frontend/.env.development.local
+frontend/.env.test.local
+frontend/.env.production.local
+
+# ── OS / Editor ───────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
