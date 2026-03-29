@@ -4,6 +4,10 @@
 // CLAUDE.md specifies .NET 8 — update TargetFramework in TeamTaskAllocator.csproj to net8.0
 // when the .NET 8 SDK is installed on the target build machine.
 
+using Microsoft.EntityFrameworkCore;
+using TeamTaskAllocator.Data.Context;
+using TeamTaskAllocator.Repositories;
+
 var builder = WebApplication.CreateBuilder(args);
 
 // ── Controllers ──────────────────────────────────────────────────────────────
@@ -20,15 +24,13 @@ builder.Services.AddOpenApi();
 
 // ── Database (Npgsql / EF Core) ───────────────────────────────────────────────
 // See docs/adr/001-database-schema.md — Decision 3: Repository pattern.
-// TODO (Task 1.2): Register TaskAllocatorContext here once created.
-// builder.Services.AddDbContext<TaskAllocatorContext>(options =>
-//     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
+builder.Services.AddDbContext<TaskAllocatorContext>(options =>
+    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 // ── Repositories ─────────────────────────────────────────────────────────────
 // See docs/adr/001-database-schema.md — Decision 3: Repository pattern.
-// TODO (Task 1.3): Register IUserRepository and ITaskRepository here once created.
-// builder.Services.AddScoped<IUserRepository, UserRepository>();
-// builder.Services.AddScoped<ITaskRepository, TaskRepository>();
+builder.Services.AddScoped<IUserRepository, UserRepository>();
+builder.Services.AddScoped<ITaskRepository, TaskRepository>();
 
 // ── Authentication / JWT ──────────────────────────────────────────────────────
 // See docs/adr/001-database-schema.md — Decision 4: JWT auth.
