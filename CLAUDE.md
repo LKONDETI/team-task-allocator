@@ -16,7 +16,7 @@ Built as a combined ASP.NET Core + React project (single repo, single deployment
 
 ## Project structure
 - /ClientApp — React TypeScript frontend
-  - /src/pages — Login, ManagerDashboard, EmployeeDashboard, Calendar, TaskDetail
+  - /src/pages — Login, ManagerDashboard, EmployeeDashboard
   - /src/components — shared UI components
   - /src/hooks — custom React hooks
   - /src/api — Axios client and API calls
@@ -27,7 +27,6 @@ Built as a combined ASP.NET Core + React project (single repo, single deployment
 - /Repositories — data access layer
 - /Models — Entity Framework models
 - /DTOs — request and response shapes
-- /BackgroundServices — email alert background job
 - /Migrations — EF Core migrations
 - /docs/adr — Architecture Decision Records
 
@@ -54,29 +53,27 @@ Never move to the next task without running testing-expert first.
 - employee — can view own assigned tasks, update task status, view calendar
 
 ## V1 features (in scope)
-- Manager creates tasks and assigns them to employees
-- Employee calendar view showing assigned tasks on their deadline date
-- Deadline tracking with overdue status (auto-updated by background job)
-- Email alerts sent 24 hours before deadline (once per task, not repeated)
+- Manager creates a task with title, description, and deadline
+- Manager assigns task by searching employee name OR skill
+- Task saved and linked to the assigned employee
+- Employee sees assigned tasks in a list view
+- Employee can toggle to a calendar view showing tasks on their deadline date
 
 ## Out of scope for V1
-- Auto-assignment / skill matching algorithm
+- Email alerts
+- Overdue tracking
 - Workload balancing
-- Leave management
+- Auto-assignment
+- Task status updates
 - Task comments or attachments
 - Mobile view
 
 ## Database models
-- User: Id, Name, Email, PasswordHash, Role, CreatedAt
-- Task: Id, Title, Description, AssigneeId, ManagerId, Deadline, Status, 
-        AlertSentAt, CreatedAt, UpdatedAt
-- AuditLog: Id, TaskId, ChangedBy, OldStatus, NewStatus, ChangedAt
+- User: Id, Name, Email, PasswordHash, Role, Skills (array), CreatedAt
+- Task: Id, Title, Description, AssigneeId, ManagerId, Deadline, CreatedAt, UpdatedAt
 
 ## Task statuses
-- pending — just assigned, not started
-- in-progress — employee has started work
-- overdue — deadline has passed, not completed (set by background job)
-- completed — employee marked as done
+- pending — just assigned, not started (only status needed for V1)
 
 ## API conventions (.NET)
 - All routes prefixed with /api
