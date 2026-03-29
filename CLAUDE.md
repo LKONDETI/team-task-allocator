@@ -123,3 +123,8 @@ Reference them before making any structural changes.
 - Use DbContext directly in controllers (always go through repository)
 - Use fetch directly in React (always use the Axios client)
 - Send more than one email alert per task
+
+## Database naming convention
+- EF Core uses quoted PascalCase table and column names (e.g. "Users", "Skills", "Name")
+- Do NOT use unquoted lowercase in raw SQL — it will silently target nonexistent relations
+- All raw SQL in migrations must use quoted PascalCase identifiers matching EF Core output
