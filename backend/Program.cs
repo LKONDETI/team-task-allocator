@@ -4,9 +4,13 @@
 // CLAUDE.md specifies .NET 8 — update TargetFramework in TeamTaskAllocator.csproj to net8.0
 // when the .NET 8 SDK is installed on the target build machine.
 
+using System.Text;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
 using TeamTaskAllocator.Data.Context;
 using TeamTaskAllocator.Repositories;
+using TeamTaskAllocator.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -34,28 +38,38 @@ builder.Services.AddScoped<ITaskRepository, TaskRepository>();
 
 // ── Authentication / JWT ──────────────────────────────────────────────────────
 // See docs/adr/001-database-schema.md — Decision 4: JWT auth.
-// TODO (Task 2.2): Uncomment and configure JWT Bearer once Microsoft.IdentityModel.Tokens is available.
-// builder.Services
-//     .AddAuthentication("Bearer")
-//     .AddJwtBearer(options =>
-//     {
-//         options.TokenValidationParameters = new Microsoft.IdentityModel.Tokens.TokenValidationParameters
-//         {
-//             ValidateIssuer = true,
-//             ValidateAudience = true,
-//             ValidateLifetime = true,
-//             ValidateIssuerSigningKey = true,
-//             ValidIssuer = builder.Configuration["Jwt:Issuer"],
-//             ValidAudience = builder.Configuration["Jwt:Audience"],
-//             IssuerSigningKey = new Microsoft.IdentityModel.Tokens.SymmetricSecurityKey(
-//                 System.Text.Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Secret"]!))
-//         };
-//     });
-// builder.Services.AddAuthorization();
+builder.Services
+    .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
+    {
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidateAudience = true,
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
+            ValidIssuer = builder.Configuration["Jwt:Issuer"],
+            ValidAudience = builder.Configuration["Jwt:Audience"],
+            IssuerSigningKey = new SymmetricSecurityKey(
+                Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Secret"]!))
+        };
+    });
+builder.Services.AddAuthorization();
+
+// ── Services ──────────────────────────────────────────────────────────────────
+builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddScoped<IUserService, UserService>();
+builder.Services.AddScoped<ITaskService, TaskService>();
 
 // ─────────────────────────────────────────────────────────────────────────────
 
 var app = builder.Build();
+
+// ── Seed demo data (Development only) ────────────────────────────────────────
+if (app.Environment.IsDevelopment())
+{
+    await TeamTaskAllocator.Models.DbSeeder.SeedAsync(app.Services);
+}
 
 // ── Middleware pipeline ───────────────────────────────────────────────────────
 if (app.Environment.IsDevelopment())
@@ -65,9 +79,8 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
-// TODO (Task 2.2): Uncomment once authentication is configured.
-// app.UseAuthentication();
-// app.UseAuthorization();
+app.UseAuthentication();
+app.UseAuthorization();
 
 app.MapControllers();
 
