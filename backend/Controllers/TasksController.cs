@@ -25,10 +25,7 @@ public class TasksController : ControllerBase
         if (!ModelState.IsValid)
             return ValidationProblem(ModelState);
 
-        var managerIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier)
-                             ?? User.FindFirstValue("sub");
-
-        if (!int.TryParse(managerIdClaim, out var managerId))
+        if (!TryGetUserId(out var managerId))
             return Problem(detail: "Unable to identify the authenticated manager.", statusCode: 401);
 
         try
@@ -42,18 +39,33 @@ public class TasksController : ControllerBase
         }
     }
 
+    // GET /api/tasks — manager sees tasks they created
+    [HttpGet]
+    [Authorize(Roles = "manager")]
+    public async Task<IActionResult> GetManagerTasks()
+    {
+        if (!TryGetUserId(out var managerId))
+            return Problem(detail: "Unable to identify the authenticated manager.", statusCode: 401);
+
+        var tasks = await _taskService.GetByManagerAsync(managerId);
+        return Ok(tasks);
+    }
+
     // GET /api/tasks/my — employee sees their own tasks
     [HttpGet("my")]
     [Authorize]
     public async Task<IActionResult> GetMyTasks()
     {
-        var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier)
-                          ?? User.FindFirstValue("sub");
-
-        if (!int.TryParse(userIdClaim, out var userId))
+        if (!TryGetUserId(out var userId))
             return Problem(detail: "Unable to identify the authenticated user.", statusCode: 401);
 
         var tasks = await _taskService.GetByAssigneeAsync(userId);
         return Ok(tasks);
+    }
+
+    private bool TryGetUserId(out int userId)
+    {
+        var claim = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirstValue("sub");
+        return int.TryParse(claim, out userId);
     }
 }

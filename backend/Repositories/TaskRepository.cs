@@ -37,4 +37,13 @@ public class TaskRepository : ITaskRepository
         await _context.SaveChangesAsync();
         return task;
     }
+
+    public async Task<IEnumerable<TaskEntity>> GetByManagerIdAsync(int managerId)
+    {
+        return await _context.Tasks
+            .Where(t => t.ManagerId == managerId)
+            .Include(t => t.Assignee)
+            .Include(t => t.Manager)
+            .ToListAsync();
+    }
 }

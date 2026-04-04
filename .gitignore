@@ -4,6 +4,8 @@ backend/obj/
 backend/*.user
 backend/.vs/
 backend/appsettings.Local.json
+backend.Tests/bin/
+backend.Tests/obj/
 
 # ── React / Node ──────────────────────────────────────────────────────────────
 frontend/node_modules/

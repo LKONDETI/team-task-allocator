@@ -52,6 +52,13 @@ public class TaskService : ITaskService
         return tasks.Select(t => MapToDto(t, t.Assignee?.Name ?? string.Empty, t.Manager?.Name ?? string.Empty));
     }
 
+    public async Task<IEnumerable<TaskResponseDto>> GetByManagerAsync(int managerId)
+    {
+        var tasks = await _taskRepository.GetByManagerIdAsync(managerId);
+
+        return tasks.Select(t => MapToDto(t, t.Assignee?.Name ?? string.Empty, t.Manager?.Name ?? string.Empty));
+    }
+
     private static TaskResponseDto MapToDto(TaskEntity task, string assigneeName, string managerName) =>
         new()
         {
