@@ -10,3 +10,8 @@ export async function getMyTasks(): Promise<Task[]> {
   const response = await client.get<Task[]>('/tasks/my');
   return response.data;
 }
+
+export async function getTasks(): Promise<Task[]> {
+  const response = await client.get<Task[]>('/tasks');
+  return response.data;
+}
