@@ -6,10 +6,11 @@ A task management system where managers assign tasks to employees. Employees see
 
 | Layer | Technology |
 |---|---|
-| Frontend | React 18 + TypeScript, Vite, Tailwind CSS, FullCalendar, date-fns |
+| Frontend | React 19 + TypeScript, Vite, Tailwind CSS, FullCalendar, date-fns, Axios |
 | Backend | ASP.NET Core (.NET 9) Web API (C#) |
 | Database | PostgreSQL with Entity Framework Core (Npgsql) |
 | Auth | JWT — role-based (manager / employee), 24-hour expiry |
+| Testing | Vitest + React Testing Library (frontend) |
 | Email | SendGrid (wired, not active in V1) |
 
 React is served by ASP.NET Core SPA middleware — same origin, no CORS needed.
@@ -21,16 +22,16 @@ React is served by ASP.NET Core SPA middleware — same origin, no CORS needed.
 ├── frontend/               # React TypeScript app
 │   └── src/
 │       ├── api/            # Axios client and API call functions
-│       ├── components/     # Shared UI components
+│       ├── components/     # EmployeeSearch, ManagerTaskList, ProtectedRoute
 │       ├── context/        # AuthContext (JWT state)
 │       ├── hooks/          # Custom React hooks
 │       ├── pages/          # Login, ManagerDashboard, EmployeeDashboard
 │       └── types/          # TypeScript interfaces
 ├── backend/                # ASP.NET Core Web API
-│   ├── Controllers/        # Route handlers (input validation only)
-│   ├── Services/           # Business logic
+│   ├── Controllers/        # AuthController, TasksController, UsersController
+│   ├── Services/           # Business logic (AuthService, TaskService, UserService)
 │   ├── Repositories/       # Data access (IUserRepository, ITaskRepository)
-│   ├── Models/             # EF Core entities
+│   ├── Models/             # EF Core entities (User, TaskEntity)
 │   ├── DTOs/               # Request / response shapes
 │   └── Migrations/         # EF Core migrations
 └── docs/
@@ -54,13 +55,7 @@ psql -U postgres -d teamtaskallocator -c "CREATE EXTENSION IF NOT EXISTS pg_trgm
 
 ### 2. Backend configuration
 
-Copy and edit the dev settings:
-
-```bash
-cp backend/appsettings.Development.json.example backend/appsettings.Development.json
-```
-
-Set your connection string and JWT secret in `appsettings.Development.json`:
+Edit `backend/appsettings.Development.json` with your local values:
 
 ```json
 {
@@ -75,7 +70,7 @@ Set your connection string and JWT secret in `appsettings.Development.json`:
 }
 ```
 
-> Never commit real secrets to source control.
+> Never commit real secrets to source control. The `appsettings.Development.json` file is git-ignored.
 
 ### 3. Run migrations
 
@@ -103,12 +98,19 @@ npm run dev
 
 Vite dev server proxies `/api` requests to the .NET backend.
 
+## Running Tests
+
+```bash
+cd frontend
+npm test
+```
+
 ## Roles
 
 | Role | Capabilities |
 |---|---|
-| `manager` | Create tasks, assign to employees (search by name or skill), view all tasks |
-| `employee` | View own assigned tasks (list and calendar), update task status |
+| `manager` | Create tasks, assign to employees (search by name or skill), view own created tasks |
+| `employee` | View own assigned tasks (list and calendar view) |
 
 ## API Routes
 
@@ -116,21 +118,21 @@ All routes are prefixed with `/api`.
 
 | Method | Path | Role | Description |
 |---|---|---|---|
-| POST | `/api/auth/login` | Public | Returns a JWT |
+| POST | `/api/auth/login` | Public | Authenticate and receive a JWT |
+| GET | `/api/auth/me` | Any | Return current user info from JWT claims |
 | GET | `/api/users/search?q=` | manager | Search employees by name or skill |
 | POST | `/api/tasks` | manager | Create and assign a task |
-| GET | `/api/tasks` | manager | List all tasks |
-| GET | `/api/tasks/my` | employee | List own assigned tasks |
-| PATCH | `/api/tasks/{id}/status` | employee | Update task status |
+| GET | `/api/tasks` | manager | List tasks created by the authenticated manager |
+| GET | `/api/tasks/my` | employee | List tasks assigned to the authenticated employee |
 
 ## Architecture Decisions
 
 Key decisions are documented as ADRs in [docs/adr/](docs/adr/):
 
-- [ADR 001](docs/adr/001-database-schema.md) — Database schema, skills storage (PostgreSQL `TEXT[]` + GIN index), search strategy, repository pattern, JWT auth
+- [ADR 001](docs/adr/001-database-schema.md) — Skills storage (`TEXT[]` + GIN index), employee search strategy, repository pattern, JWT auth
 
 ## V1 Scope
 
 **In scope:** task creation, employee assignment (search by name or skill), list view, calendar view.
 
-**Out of scope for V1:** email alerts, overdue tracking, workload balancing, auto-assignment, task comments/attachments, mobile view.
+**Out of scope for V1:** email alerts, overdue tracking, workload balancing, auto-assignment, task status updates, task comments/attachments, mobile view.
