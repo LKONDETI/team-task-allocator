@@ -2,11 +2,13 @@
 
 A task management system where managers assign tasks to employees. Employees see their assigned tasks in a list or calendar view with deadline tracking.
 
+Built with a premium dark glassmorphic UI — deep purple/indigo palette, Inter typography, and smooth micro-animations throughout.
+
 ## Stack
 
 | Layer | Technology |
 |---|---|
-| Frontend | React 19 + TypeScript, Vite, Tailwind CSS, FullCalendar, date-fns, Axios |
+| Frontend | React 19 + TypeScript, Vite, Tailwind CSS, FullCalendar, date-fns, Axios, Inter (Google Fonts) |
 | Backend | ASP.NET Core (.NET 9) Web API (C#) |
 | Database | PostgreSQL with Entity Framework Core (Npgsql) |
 | Auth | JWT — role-based (manager / employee), 24-hour expiry |
@@ -104,6 +106,19 @@ Vite dev server proxies `/api` requests to the .NET backend.
 cd frontend
 npm test
 ```
+
+## UI Design
+
+All pages share a cohesive dark glassmorphic design system:
+
+| Page / Component | Design highlights |
+|---|---|
+| **Login** | Full-screen gradient background, glassmorphic card, icon-prefixed inputs, gradient sign-in button |
+| **ManagerDashboard** | Ambient blob background, glassmorphic form card, dark datetime picker, gradient submit with spinner |
+| **EmployeeDashboard** | Personalised greeting, smart deadline badges (overdue / due today / Nd left), date block per task, animated loading and empty states |
+| **EmployeeSearch** | Live spinner while debouncing, avatar initials, skill pills with overflow count, dark dropdown |
+
+Design tokens: `slate-900 → purple-950 → slate-900` gradient, `bg-white/5 backdrop-blur-xl` glass surfaces, `purple-500 → indigo-600` accent gradient.
 
 ## Roles
 
