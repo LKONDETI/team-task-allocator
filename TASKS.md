@@ -28,10 +28,10 @@ Status legend: ✅ Done | 🔄 In Progress | ⬜ Not Started
 | # | Task | Status | Notes |
 |---|------|--------|-------|
 | 2.1 | Frontend: EmployeeDashboard unit tests | ✅ | `EmployeeDashboard.test.tsx` exists |
-| 2.2 | Frontend: ManagerDashboard unit tests | ⬜ | Test form submit, assignee selection, error states |
-| 2.3 | Frontend: EmployeeSearch component tests | ⬜ | Test search input, result selection, debounce |
-| 2.4 | Frontend: Login page tests | ⬜ | Test form submit, error message, redirect |
-| 2.5 | Frontend: AuthContext tests | ⬜ | Test login/logout state, token persistence |
+| 2.2 | Frontend: ManagerDashboard unit tests | ✅ | `ManagerDashboard.test.tsx` exists |
+| 2.3 | Frontend: EmployeeSearch component tests | ✅ | `EmployeeSearch.test.tsx` exists |
+| 2.4 | Frontend: Login page tests | ✅ | `Login.test.tsx` exists |
+| 2.5 | Frontend: AuthContext tests | ✅ | `AuthContext.test.tsx` exists |
 | 2.6 | Backend: AuthService unit tests | ⬜ | Test password hash verify, token generation |
 | 2.7 | Backend: UserService unit tests | ⬜ | Test search by name and skill |
 | 2.8 | Backend: TaskService unit tests | ⬜ | Test create, assign, fetch-by-user |
@@ -44,8 +44,8 @@ Status legend: ✅ Done | 🔄 In Progress | ⬜ Not Started
 
 | # | Task | Status | Notes |
 |---|------|--------|-------|
-| 3.1 | Backend: `GET /api/tasks` — return all tasks (manager only) | ⬜ | Add to `TasksController`, guard with manager role |
-| 3.2 | Frontend: ManagerDashboard task list section | ⬜ | Show all tasks with assignee name, deadline, status |
+| 3.1 | Backend: `GET /api/tasks` — return all tasks (manager only) | ✅ | `GetManagerTasks` in `TasksController`, manager role guard |
+| 3.2 | Frontend: ManagerDashboard task list section | 🔄 | `ManagerTaskList` component + `getTasks` API done; not yet rendered in `ManagerDashboard` |
 | 3.3 | Backend: `DELETE /api/tasks/{id}` — manager can delete task | ⬜ | Only task creator can delete |
 | 3.4 | Tests for task list + delete | ⬜ | |
 
