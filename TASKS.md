@@ -33,7 +33,7 @@ Status legend: ✅ Done | 🔄 In Progress | ⬜ Not Started
 | 2.4 | Frontend: Login page tests | ✅ | `Login.test.tsx` exists |
 | 2.5 | Frontend: AuthContext tests | ✅ | `AuthContext.test.tsx` exists |
 | 2.6 | Backend: AuthService unit tests | ⬜ | Test password hash verify, token generation |
-| 2.7 | Backend: UserService unit tests | ⬜ | Test search by name and skill |
+| 2.7 | Backend: UserService unit tests | ✅ | `UserServiceTests.cs` — 6 tests covering empty result, DTO mapping, multi-match, skills array, no-skills, query forwarding |
 | 2.8 | Backend: TaskService unit tests | ⬜ | Test create, assign, fetch-by-user |
 | 2.9 | Backend: TasksController integration tests | ⬜ | Test auth guard, 400/404 responses |
 | 2.10 | Backend: UsersController integration tests | ⬜ | Test search endpoint, role guard |
