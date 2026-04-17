@@ -32,7 +32,7 @@ Status legend: ✅ Done | 🔄 In Progress | ⬜ Not Started
 | 2.3 | Frontend: EmployeeSearch component tests | ✅ | `EmployeeSearch.test.tsx` exists |
 | 2.4 | Frontend: Login page tests | ✅ | `Login.test.tsx` exists |
 | 2.5 | Frontend: AuthContext tests | ✅ | `AuthContext.test.tsx` exists |
-| 2.6 | Backend: AuthService unit tests | ⬜ | Test password hash verify, token generation |
+| 2.6 | Backend: AuthService unit tests | ✅ | Test password hash verify, token generation |
 | 2.7 | Backend: UserService unit tests | ✅ | `UserServiceTests.cs` — 6 tests covering empty result, DTO mapping, multi-match, skills array, no-skills, query forwarding |
 | 2.8 | Backend: TaskService unit tests | ✅ | `TaskServiceTests.cs` — 11 tests covering CreateAsync (7) and GetByAssigneeAsync (4); GetByManagerAsync (3) already existed |
 | 2.9 | Backend: TasksController integration tests | ✅ | `TasksControllerTests.cs` — 9 tests covering Create (5) and GetMyTasks (4); GetManagerTasks (3) already existed |
