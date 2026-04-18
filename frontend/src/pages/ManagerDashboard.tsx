@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { createTask } from '../api/tasks';
 import EmployeeSearch from '../components/EmployeeSearch';
+import ManagerTaskList from '../components/ManagerTaskList';
 import { useAuth } from '../context/AuthContext';
 import type { UserSearchResult } from '../types/user';
 
@@ -15,6 +16,7 @@ export default function ManagerDashboard() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [successMsg, setSuccessMsg] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
+  const [taskListKey, setTaskListKey] = useState(0);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -40,6 +42,7 @@ export default function ManagerDashboard() {
       setDescription('');
       setDeadline('');
       setAssignee(null);
+      setTaskListKey((k) => k + 1);
     } catch {
       setErrorMsg('Failed to create task. Please try again.');
     } finally {
@@ -88,12 +91,17 @@ export default function ManagerDashboard() {
       </header>
 
       {/* Main content */}
-      <main className="relative z-10 max-w-2xl mx-auto px-4 py-12">
+      <main className="relative z-10 max-w-6xl mx-auto px-4 py-12">
         {/* Page heading */}
         <div className="mb-8">
-          <h2 className="text-3xl font-bold text-white tracking-tight">Create a Task</h2>
-          <p className="text-purple-300 mt-1 text-sm">Assign work to your team members with deadlines.</p>
+          <h2 className="text-3xl font-bold text-white tracking-tight">Manager Dashboard</h2>
+          <p className="text-purple-300 mt-1 text-sm">Create tasks and track your team's assignments.</p>
         </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-5 gap-8 items-start">
+          {/* ── Create task form ── */}
+          <div className="lg:col-span-2">
+            <h3 className="text-sm font-semibold text-purple-300 uppercase tracking-wider mb-4">Create a Task</h3>
 
         {/* Form card */}
         <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl p-8 space-y-6">
@@ -214,6 +222,16 @@ export default function ManagerDashboard() {
             </button>
           </form>
         </div>
+          </div>{/* end form column */}
+
+          {/* ── Task list ── */}
+          <div className="lg:col-span-3">
+            <h3 className="text-sm font-semibold text-purple-300 uppercase tracking-wider mb-4">Your Tasks</h3>
+            <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl p-6">
+              <ManagerTaskList key={taskListKey} />
+            </div>
+          </div>
+        </div>{/* end grid */}
       </main>
     </div>
   );
