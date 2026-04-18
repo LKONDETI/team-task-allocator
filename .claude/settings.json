@@ -1,0 +1,19 @@
+{
+  "permissions": {
+    "allow": [
+      "Read",
+      "Glob",
+      "Grep",
+      "Bash(git diff*)",
+      "Bash(git log*)",
+      "Bash(git status*)",
+      "Bash(git blame*)",
+      "Bash(find *)",
+      "Bash(ls *)",
+      "Bash(dotnet build*)",
+      "Bash(dotnet test*)",
+      "Bash(npm run *)",
+      "Bash(npm test*)"
+    ]
+  }
+}
