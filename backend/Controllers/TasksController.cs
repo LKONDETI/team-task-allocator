@@ -63,6 +63,28 @@ public class TasksController : ControllerBase
         return Ok(tasks);
     }
 
+    // DELETE /api/tasks/{id} — only the manager who created the task can delete it
+    [HttpDelete("{id:int}")]
+    [Authorize(Roles = "manager")]
+    public async Task<IActionResult> Delete(int id)
+    {
+        if (!TryGetUserId(out var managerId))
+            return Problem(detail: "Unable to identify the authenticated manager.", statusCode: 401);
+
+        try
+        {
+            var deleted = await _taskService.DeleteAsync(id, managerId);
+            if (!deleted)
+                return Problem(detail: $"Task {id} not found.", statusCode: StatusCodes.Status404NotFound, title: "Not Found");
+
+            return NoContent();
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return Problem(detail: ex.Message, statusCode: StatusCodes.Status403Forbidden, title: "Forbidden");
+        }
+    }
+
     private bool TryGetUserId(out int userId)
     {
         var claim = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirstValue("sub");

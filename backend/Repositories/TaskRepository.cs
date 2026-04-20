@@ -46,4 +46,14 @@ public class TaskRepository : ITaskRepository
             .Include(t => t.Manager)
             .ToListAsync();
     }
+
+    public async Task<bool> DeleteAsync(int id)
+    {
+        var task = await _context.Tasks.FindAsync(id);
+        if (task is null) return false;
+
+        _context.Tasks.Remove(task);
+        await _context.SaveChangesAsync();
+        return true;
+    }
 }

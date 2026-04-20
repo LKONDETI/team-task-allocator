@@ -10,4 +10,5 @@ public interface ITaskRepository
     Task<IEnumerable<TaskEntity>> GetByAssigneeIdAsync(int assigneeId);
     Task<TaskEntity> CreateAsync(TaskEntity task);
     Task<IEnumerable<TaskEntity>> GetByManagerIdAsync(int managerId);
+    Task<bool> DeleteAsync(int id);
 }

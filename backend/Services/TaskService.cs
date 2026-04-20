@@ -59,6 +59,17 @@ public class TaskService : ITaskService
         return tasks.Select(t => MapToDto(t, t.Assignee?.Name ?? string.Empty, t.Manager?.Name ?? string.Empty));
     }
 
+    public async Task<bool> DeleteAsync(int taskId, int requestingManagerId)
+    {
+        var task = await _taskRepository.GetByIdAsync(taskId);
+        if (task is null) return false;
+
+        if (task.ManagerId != requestingManagerId)
+            throw new UnauthorizedAccessException("Only the manager who created this task can delete it.");
+
+        return await _taskRepository.DeleteAsync(taskId);
+    }
+
     private static TaskResponseDto MapToDto(TaskEntity task, string assigneeName, string managerName) =>
         new()
         {
