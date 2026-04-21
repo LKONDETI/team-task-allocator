@@ -1,9 +1,11 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import FullCalendar from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import { format, differenceInDays } from 'date-fns';
 import { getMyTasks } from '../api/tasks';
 import { useAuth } from '../context/AuthContext';
+import { useTaskStatusUpdate } from '../hooks/useTaskStatusUpdate';
+import StatusBadge from '../components/StatusBadge';
 import type { Task } from '../types/task';
 
 type ViewMode = 'list' | 'calendar';
@@ -46,6 +48,8 @@ export default function EmployeeDashboard() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [view, setView] = useState<ViewMode>('list');
+  const [optimisticStatuses, setOptimisticStatuses] = useState<Record<number, string>>({});
+  const { updateStatus, updatingIds } = useTaskStatusUpdate();
 
   useEffect(() => {
     getMyTasks()
@@ -53,6 +57,19 @@ export default function EmployeeDashboard() {
       .catch(console.error)
       .finally(() => setIsLoading(false));
   }, []);
+
+  const handleStatusChange = useCallback(async (taskId: number, newStatus: string) => {
+    const previousStatus = optimisticStatuses[taskId] ?? tasks.find((t) => t.id === taskId)?.status;
+    setOptimisticStatuses((prev) => ({ ...prev, [taskId]: newStatus }));
+    try {
+      const updated = await updateStatus(taskId, newStatus);
+      setTasks((prev) => prev.map((t) => (t.id === taskId ? updated : t)));
+      setOptimisticStatuses((prev) => { const next = { ...prev }; delete next[taskId]; return next; });
+    } catch {
+      // Revert optimistic update on failure
+      setOptimisticStatuses((prev) => ({ ...prev, [taskId]: previousStatus ?? 'Pending' }));
+    }
+  }, [optimisticStatuses, tasks, updateStatus]);
 
   const calendarEvents = tasks.map((t) => ({
     id: String(t.id),
@@ -181,6 +198,12 @@ export default function EmployeeDashboard() {
                         </h3>
                         <p className="text-sm text-slate-400 mt-1 line-clamp-2">{task.description}</p>
                         <div className="flex items-center gap-2 mt-3 flex-wrap">
+                          <StatusBadge
+                            status={optimisticStatuses[task.id] ?? task.status ?? 'Pending'}
+                            taskId={task.id}
+                            disabled={updatingIds.has(task.id)}
+                            onStatusChange={handleStatusChange}
+                          />
                           <DeadlineBadge deadline={task.deadline} />
                           <span className="text-xs text-slate-500">
                             Assigned by{' '}

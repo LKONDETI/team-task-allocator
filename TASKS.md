@@ -55,9 +55,9 @@ Status legend: ✅ Done | 🔄 In Progress | ⬜ Not Started
 
 | # | Task | Status | Notes |
 |---|------|--------|-------|
-| 4.1 | Backend: `PATCH /api/tasks/{id}/status` endpoint | ⬜ | Employee can set: pending → in-progress → completed |
-| 4.2 | Frontend: Status badge + dropdown in list view | ⬜ | Optimistic update on change |
-| 4.3 | Tests for status update flow | ⬜ | |
+| 4.1 | Backend: `PATCH /api/tasks/{id}/status` endpoint | ✅ | Employee can set: pending → in-progress → completed |
+| 4.2 | Frontend: Status badge + dropdown in list view | ✅ | Optimistic update on change |
+| 4.3 | Tests for status update flow | ✅ | |
 
 ---
 

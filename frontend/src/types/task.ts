@@ -7,6 +7,7 @@ export interface Task {
   managerId: number;
   managerName: string;
   deadline: string; // ISO string from backend
+  status: string;   // "Pending" | "InProgress" | "Completed"
   createdAt: string;
   updatedAt: string;
 }

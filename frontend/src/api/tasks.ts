@@ -15,3 +15,8 @@ export async function getTasks(): Promise<Task[]> {
   const response = await client.get<Task[]>('/tasks');
   return response.data;
 }
+
+export async function updateTaskStatus(id: number, status: string): Promise<Task> {
+  const response = await client.patch<Task>(`/tasks/${id}/status`, { status });
+  return response.data;
+}

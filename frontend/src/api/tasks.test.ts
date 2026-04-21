@@ -1,17 +1,19 @@
 import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest';
 import client from './client';
-import { createTask, getMyTasks, getTasks } from './tasks';
+import { createTask, getMyTasks, getTasks, updateTaskStatus } from './tasks';
 import type { CreateTaskRequest } from '../types/task';
 
 vi.mock('./client', () => ({
   default: {
     post: vi.fn(),
     get: vi.fn(),
+    patch: vi.fn(),
   },
 }));
 
 const mockPost = client.post as Mock;
 const mockGet = client.get as Mock;
+const mockPatch = client.patch as Mock;
 
 beforeEach(() => vi.clearAllMocks());
 
@@ -62,5 +64,17 @@ describe('getTasks', () => {
     const result = await getTasks();
 
     expect(result).toEqual([]);
+  });
+});
+
+describe('updateTaskStatus', () => {
+  it('calls PATCH /tasks/:id/status with the new status and returns the updated task', async () => {
+    const updated = { id: 5, title: 'Deploy', status: 'InProgress' };
+    mockPatch.mockResolvedValue({ data: updated });
+
+    const result = await updateTaskStatus(5, 'InProgress');
+
+    expect(mockPatch).toHaveBeenCalledWith('/tasks/5/status', { status: 'InProgress' });
+    expect(result).toEqual(updated);
   });
 });
