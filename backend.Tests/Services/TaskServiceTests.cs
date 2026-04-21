@@ -263,6 +263,61 @@ public class TaskService_GetByAssigneeAsync_Tests
     }
 }
 
+// ── DeleteAsync ───────────────────────────────────────────────────────────────
+
+public class TaskService_DeleteAsync_Tests
+{
+    private readonly ITaskRepository _taskRepo = Substitute.For<ITaskRepository>();
+    private readonly IUserRepository _userRepo = Substitute.For<IUserRepository>();
+
+    private TaskService CreateSut() => new(_taskRepo, _userRepo);
+
+    // ── Iteration 1: returns false when task does not exist ───────────────────
+
+    [Fact]
+    public async Task DeleteAsync_returns_false_when_task_does_not_exist()
+    {
+        _taskRepo.GetByIdAsync(99).Returns((TaskEntity?)null);
+
+        var result = await CreateSut().DeleteAsync(taskId: 99, requestingManagerId: 1);
+
+        result.Should().BeFalse();
+        await _taskRepo.DidNotReceive().DeleteAsync(Arg.Any<int>());
+    }
+
+    // ── Iteration 2: throws when requester is not the task creator ────────────
+
+    [Fact]
+    public async Task DeleteAsync_throws_UnauthorizedAccessException_when_manager_did_not_create_task()
+    {
+        var owner = Fixtures.Manager(id: 1);
+        var other = Fixtures.Manager(id: 2);
+        var task = Fixtures.Task(id: 10, assignee: Fixtures.Employee(), manager: owner);
+        _taskRepo.GetByIdAsync(10).Returns(task);
+
+        var act = () => CreateSut().DeleteAsync(taskId: 10, requestingManagerId: other.Id);
+
+        await act.Should().ThrowAsync<UnauthorizedAccessException>()
+            .WithMessage("*created*");
+    }
+
+    // ── Iteration 3: calls repository and returns true when authorized ─────────
+
+    [Fact]
+    public async Task DeleteAsync_calls_repository_and_returns_true_when_manager_is_creator()
+    {
+        var manager = Fixtures.Manager(id: 1);
+        var task = Fixtures.Task(id: 10, assignee: Fixtures.Employee(), manager: manager);
+        _taskRepo.GetByIdAsync(10).Returns(task);
+        _taskRepo.DeleteAsync(10).Returns(true);
+
+        var result = await CreateSut().DeleteAsync(taskId: 10, requestingManagerId: manager.Id);
+
+        result.Should().BeTrue();
+        await _taskRepo.Received(1).DeleteAsync(10);
+    }
+}
+
 // ── GetByManagerAsync ─────────────────────────────────────────────────────────
 
 public class TaskServiceGetByManagerTests

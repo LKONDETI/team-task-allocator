@@ -210,6 +210,85 @@ public class TasksController_GetMyTasks_Tests
     }
 }
 
+// ── DELETE /api/tasks/{id} — Delete ──────────────────────────────────────────
+
+public class TasksController_Delete_Tests
+{
+    // ── Iteration 1: 204 No Content on successful delete ─────────────────────
+
+    [Fact]
+    public async Task Delete_returns_204_when_task_is_deleted()
+    {
+        var service = Substitute.For<ITaskService>();
+        service.DeleteAsync(10, 1).Returns(true);
+
+        var result = await ControllerFactory.WithUser(service, userId: 1)
+            .Delete(10) as NoContentResult;
+
+        result.Should().NotBeNull();
+        result!.StatusCode.Should().Be(204);
+    }
+
+    // ── Iteration 2: 404 when task does not exist ─────────────────────────────
+
+    [Fact]
+    public async Task Delete_returns_404_when_task_does_not_exist()
+    {
+        var service = Substitute.For<ITaskService>();
+        service.DeleteAsync(Arg.Any<int>(), Arg.Any<int>()).Returns(false);
+
+        var result = await ControllerFactory.WithUser(service, userId: 1)
+            .Delete(99) as ObjectResult;
+
+        result.Should().NotBeNull();
+        result!.StatusCode.Should().Be(404);
+    }
+
+    // ── Iteration 3: 403 when manager did not create the task ─────────────────
+
+    [Fact]
+    public async Task Delete_returns_403_when_manager_is_not_task_creator()
+    {
+        var service = Substitute.For<ITaskService>();
+        service.DeleteAsync(Arg.Any<int>(), Arg.Any<int>())
+            .ThrowsAsync(new UnauthorizedAccessException("Only the manager who created this task can delete it."));
+
+        var result = await ControllerFactory.WithUser(service, userId: 2)
+            .Delete(10) as ObjectResult;
+
+        result.Should().NotBeNull();
+        result!.StatusCode.Should().Be(403);
+    }
+
+    // ── Iteration 4: 401 when JWT has no NameIdentifier claim ─────────────────
+
+    [Fact]
+    public async Task Delete_returns_401_when_user_id_claim_is_missing()
+    {
+        var service = Substitute.For<ITaskService>();
+
+        var result = await ControllerFactory.WithNoUserClaim(service)
+            .Delete(10) as ObjectResult;
+
+        result.Should().NotBeNull();
+        result!.StatusCode.Should().Be(401);
+        await service.DidNotReceive().DeleteAsync(Arg.Any<int>(), Arg.Any<int>());
+    }
+
+    // ── Iteration 5: manager id from JWT is forwarded to service ─────────────
+
+    [Fact]
+    public async Task Delete_passes_manager_id_from_jwt_claim_to_service()
+    {
+        var service = Substitute.For<ITaskService>();
+        service.DeleteAsync(Arg.Any<int>(), Arg.Any<int>()).Returns(true);
+
+        await ControllerFactory.WithUser(service, userId: 42).Delete(7);
+
+        await service.Received(1).DeleteAsync(7, 42);
+    }
+}
+
 // ── GET /api/tasks — GetManagerTasks ─────────────────────────────────────────
 
 public class TasksControllerGetManagerTasksTests

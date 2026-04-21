@@ -46,8 +46,8 @@ Status legend: ✅ Done | 🔄 In Progress | ⬜ Not Started
 |---|------|--------|-------|
 | 3.1 | Backend: `GET /api/tasks` — return all tasks (manager only) | ✅ | `GetManagerTasks` in `TasksController`, manager role guard |
 | 3.2 | Frontend: ManagerDashboard task list section | ✅ | `ManagerTaskList` wired into `ManagerDashboard`; two-column grid layout; refreshes on task create via `key` |
-| 3.3 | Backend: `DELETE /api/tasks/{id}` — manager can delete task | ⬜ | Only task creator can delete |
-| 3.4 | Tests for task list + delete | ⬜ | |
+| 3.3 | Backend: `DELETE /api/tasks/{id}` — manager can delete task | ✅ | Only task creator can delete |
+| 3.4 | Tests for task list + delete | ✅ | 8 new tests: 3 service (DeleteAsync) + 5 controller (Delete) |
 
 ---
 
