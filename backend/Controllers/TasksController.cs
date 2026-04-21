@@ -2,6 +2,7 @@ using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using TeamTaskAllocator.DTOs;
+
 using TeamTaskAllocator.Services;
 
 namespace TeamTaskAllocator.Controllers;
@@ -82,6 +83,35 @@ public class TasksController : ControllerBase
         catch (UnauthorizedAccessException ex)
         {
             return Problem(detail: ex.Message, statusCode: StatusCodes.Status403Forbidden, title: "Forbidden");
+        }
+    }
+
+    // PATCH /api/tasks/{id}/status — assigned employee only
+    [HttpPatch("{id:int}/status")]
+    [Authorize(Roles = "employee")]
+    public async Task<IActionResult> UpdateStatus(int id, [FromBody] UpdateTaskStatusDto dto)
+    {
+        if (!ModelState.IsValid)
+            return ValidationProblem(ModelState);
+
+        if (!TryGetUserId(out var userId))
+            return Problem(detail: "Unable to identify the authenticated user.", statusCode: 401);
+
+        try
+        {
+            var task = await _taskService.UpdateStatusAsync(id, userId, dto.Status);
+            if (task is null)
+                return Problem(detail: $"Task {id} not found.", statusCode: StatusCodes.Status404NotFound, title: "Not Found");
+
+            return Ok(task);
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return Problem(detail: ex.Message, statusCode: StatusCodes.Status403Forbidden, title: "Forbidden");
+        }
+        catch (ArgumentException ex)
+        {
+            return Problem(detail: ex.Message, statusCode: StatusCodes.Status400BadRequest, title: "Bad Request");
         }
     }
 

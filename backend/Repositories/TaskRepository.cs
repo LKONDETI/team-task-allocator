@@ -56,4 +56,17 @@ public class TaskRepository : ITaskRepository
         await _context.SaveChangesAsync();
         return true;
     }
+
+    public async Task<TaskEntity?> UpdateStatusAsync(int id, WorkStatus status)
+    {
+        var task = await _context.Tasks
+            .Include(t => t.Assignee)
+            .Include(t => t.Manager)
+            .FirstOrDefaultAsync(t => t.Id == id);
+        if (task is null) return null;
+
+        task.Status = status;
+        await _context.SaveChangesAsync();
+        return task;
+    }
 }

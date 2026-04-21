@@ -21,6 +21,8 @@ public class TaskEntity
 
     public DateTime Deadline { get; set; }
 
+    public WorkStatus Status { get; set; } = WorkStatus.Pending;
+
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
     // Auto-updated on every SaveChangesAsync via TaskAllocatorContext override.

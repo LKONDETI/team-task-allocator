@@ -318,6 +318,178 @@ public class TaskService_DeleteAsync_Tests
     }
 }
 
+// ── UpdateStatusAsync ─────────────────────────────────────────────────────────
+
+public class TaskService_UpdateStatusAsync_Tests
+{
+    private readonly ITaskRepository _taskRepo = Substitute.For<ITaskRepository>();
+    private readonly IUserRepository _userRepo = Substitute.For<IUserRepository>();
+
+    private TaskService CreateSut() => new(_taskRepo, _userRepo);
+
+    // ── Iteration 1: returns null when task does not exist ────────────────────
+
+    [Fact]
+    public async Task UpdateStatusAsync_returns_null_when_task_does_not_exist()
+    {
+        _taskRepo.GetByIdAsync(99).Returns((TaskEntity?)null);
+
+        var result = await CreateSut().UpdateStatusAsync(taskId: 99, requestingUserId: 1, WorkStatus.InProgress);
+
+        result.Should().BeNull();
+        await _taskRepo.DidNotReceive().UpdateStatusAsync(Arg.Any<int>(), Arg.Any<WorkStatus>());
+    }
+
+    // ── Iteration 2: throws when requester is not the assignee ───────────────
+
+    [Fact]
+    public async Task UpdateStatusAsync_throws_UnauthorizedAccessException_when_user_is_not_assignee()
+    {
+        var employee = Fixtures.Employee(id: 2);
+        var manager = Fixtures.Manager(id: 1);
+        var task = Fixtures.Task(id: 5, assignee: employee, manager: manager);
+        _taskRepo.GetByIdAsync(5).Returns(task);
+
+        var act = () => CreateSut().UpdateStatusAsync(taskId: 5, requestingUserId: 99, WorkStatus.InProgress);
+
+        await act.Should().ThrowAsync<UnauthorizedAccessException>()
+            .WithMessage("*assigned employee*");
+    }
+
+    // ── Iteration 3: throws on invalid transition Pending → Completed ─────────
+
+    [Fact]
+    public async Task UpdateStatusAsync_throws_ArgumentException_on_invalid_transition_Pending_to_Completed()
+    {
+        var employee = Fixtures.Employee(id: 2);
+        var manager = Fixtures.Manager(id: 1);
+        var task = Fixtures.Task(id: 5, assignee: employee, manager: manager);
+        task.Status = WorkStatus.Pending;
+        _taskRepo.GetByIdAsync(5).Returns(task);
+
+        var act = () => CreateSut().UpdateStatusAsync(taskId: 5, requestingUserId: employee.Id, WorkStatus.Completed);
+
+        await act.Should().ThrowAsync<ArgumentException>()
+            .WithMessage("*Invalid status transition*");
+    }
+
+    // ── Iteration 4: throws on invalid transition Completed → InProgress ──────
+
+    [Fact]
+    public async Task UpdateStatusAsync_throws_ArgumentException_on_invalid_transition_Completed_to_InProgress()
+    {
+        var employee = Fixtures.Employee(id: 2);
+        var manager = Fixtures.Manager(id: 1);
+        var task = Fixtures.Task(id: 5, assignee: employee, manager: manager);
+        task.Status = WorkStatus.Completed;
+        _taskRepo.GetByIdAsync(5).Returns(task);
+
+        var act = () => CreateSut().UpdateStatusAsync(taskId: 5, requestingUserId: employee.Id, WorkStatus.InProgress);
+
+        await act.Should().ThrowAsync<ArgumentException>()
+            .WithMessage("*Invalid status transition*");
+    }
+
+    // ── Iteration 5: valid Pending → InProgress calls repo and returns DTO ────
+
+    [Fact]
+    public async Task UpdateStatusAsync_calls_repository_and_returns_dto_on_Pending_to_InProgress()
+    {
+        var employee = Fixtures.Employee(id: 2, name: "Alice Employee");
+        var manager = Fixtures.Manager(id: 1, name: "Bob Manager");
+        var task = Fixtures.Task(id: 5, assignee: employee, manager: manager);
+        task.Status = WorkStatus.Pending;
+        _taskRepo.GetByIdAsync(5).Returns(task);
+
+        var updatedTask = Fixtures.Task(id: 5, assignee: employee, manager: manager);
+        updatedTask.Status = WorkStatus.InProgress;
+        _taskRepo.UpdateStatusAsync(5, WorkStatus.InProgress).Returns(updatedTask);
+
+        var result = await CreateSut().UpdateStatusAsync(taskId: 5, requestingUserId: employee.Id, WorkStatus.InProgress);
+
+        result.Should().NotBeNull();
+        result!.Status.Should().Be("InProgress");
+        await _taskRepo.Received(1).UpdateStatusAsync(5, WorkStatus.InProgress);
+    }
+
+    // ── Iteration 6: valid InProgress → Completed calls repo and returns DTO ──
+
+    [Fact]
+    public async Task UpdateStatusAsync_calls_repository_and_returns_dto_on_InProgress_to_Completed()
+    {
+        var employee = Fixtures.Employee(id: 2, name: "Alice Employee");
+        var manager = Fixtures.Manager(id: 1, name: "Bob Manager");
+        var task = Fixtures.Task(id: 5, assignee: employee, manager: manager);
+        task.Status = WorkStatus.InProgress;
+        _taskRepo.GetByIdAsync(5).Returns(task);
+
+        var updatedTask = Fixtures.Task(id: 5, assignee: employee, manager: manager);
+        updatedTask.Status = WorkStatus.Completed;
+        _taskRepo.UpdateStatusAsync(5, WorkStatus.Completed).Returns(updatedTask);
+
+        var result = await CreateSut().UpdateStatusAsync(taskId: 5, requestingUserId: employee.Id, WorkStatus.Completed);
+
+        result.Should().NotBeNull();
+        result!.Status.Should().Be("Completed");
+        await _taskRepo.Received(1).UpdateStatusAsync(5, WorkStatus.Completed);
+    }
+
+    // ── Iteration 7: returned DTO Status field is a string, not an int ────────
+
+    [Fact]
+    public async Task UpdateStatusAsync_maps_Status_enum_to_string_in_returned_dto()
+    {
+        var employee = Fixtures.Employee(id: 2);
+        var manager = Fixtures.Manager(id: 1);
+        var task = Fixtures.Task(id: 5, assignee: employee, manager: manager);
+        task.Status = WorkStatus.Pending;
+        _taskRepo.GetByIdAsync(5).Returns(task);
+
+        var updatedTask = Fixtures.Task(id: 5, assignee: employee, manager: manager);
+        updatedTask.Status = WorkStatus.InProgress;
+        _taskRepo.UpdateStatusAsync(5, WorkStatus.InProgress).Returns(updatedTask);
+
+        var result = await CreateSut().UpdateStatusAsync(taskId: 5, requestingUserId: employee.Id, WorkStatus.InProgress);
+
+        result!.Status.Should().BeOfType<string>();
+        result.Status.Should().Be("InProgress");
+    }
+
+    // ── Iteration 8: repo returning null after update propagates as null ──────
+
+    [Fact]
+    public async Task UpdateStatusAsync_returns_null_when_repository_UpdateStatusAsync_returns_null()
+    {
+        var employee = Fixtures.Employee(id: 2);
+        var manager = Fixtures.Manager(id: 1);
+        var task = Fixtures.Task(id: 5, assignee: employee, manager: manager);
+        task.Status = WorkStatus.Pending;
+        _taskRepo.GetByIdAsync(5).Returns(task);
+        _taskRepo.UpdateStatusAsync(5, WorkStatus.InProgress).Returns((TaskEntity?)null);
+
+        var result = await CreateSut().UpdateStatusAsync(taskId: 5, requestingUserId: employee.Id, WorkStatus.InProgress);
+
+        result.Should().BeNull();
+    }
+
+    // ── Iteration 9: self-transition Pending → Pending is rejected ────────────
+
+    [Fact]
+    public async Task UpdateStatusAsync_throws_ArgumentException_on_self_transition_Pending_to_Pending()
+    {
+        var employee = Fixtures.Employee(id: 2);
+        var manager = Fixtures.Manager(id: 1);
+        var task = Fixtures.Task(id: 5, assignee: employee, manager: manager);
+        task.Status = WorkStatus.Pending;
+        _taskRepo.GetByIdAsync(5).Returns(task);
+
+        var act = () => CreateSut().UpdateStatusAsync(taskId: 5, requestingUserId: employee.Id, WorkStatus.Pending);
+
+        await act.Should().ThrowAsync<ArgumentException>()
+            .WithMessage("*Invalid status transition*");
+    }
+}
+
 // ── GetByManagerAsync ─────────────────────────────────────────────────────────
 
 public class TaskServiceGetByManagerTests

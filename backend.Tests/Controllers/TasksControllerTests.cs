@@ -9,6 +9,7 @@ using NSubstitute;
 using NSubstitute.ExceptionExtensions;
 using TeamTaskAllocator.Controllers;
 using TeamTaskAllocator.DTOs;
+using TeamTaskAllocator.Models;
 using TeamTaskAllocator.Services;
 
 namespace TeamTaskAllocator.Tests.Controllers;
@@ -286,6 +287,162 @@ public class TasksController_Delete_Tests
         await ControllerFactory.WithUser(service, userId: 42).Delete(7);
 
         await service.Received(1).DeleteAsync(7, 42);
+    }
+}
+
+// ── PATCH /api/tasks/{id}/status — UpdateStatus ──────────────────────────────
+
+public class TasksController_UpdateStatus_Tests
+{
+    private static UpdateTaskStatusDto Dto(WorkStatus status) => new() { Status = status };
+
+    private static TaskResponseDto ResponseDto(int id = 5, string status = "InProgress") =>
+        new() { Id = id, Title = "Fix auth bug", AssigneeId = 3, Status = status };
+
+    // ── Iteration 1: 200 with updated task on Pending → InProgress ────────────
+
+    [Fact]
+    public async Task UpdateStatus_returns_200_with_task_dto_on_valid_transition()
+    {
+        var service = Substitute.For<ITaskService>();
+        var expected = ResponseDto(status: "InProgress");
+        service.UpdateStatusAsync(5, 3, WorkStatus.InProgress).Returns(expected);
+
+        var result = await ControllerFactory.WithUser(service, userId: 3)
+            .UpdateStatus(5, Dto(WorkStatus.InProgress)) as OkObjectResult;
+
+        result.Should().NotBeNull();
+        result!.StatusCode.Should().Be(200);
+        (result.Value as TaskResponseDto)!.Status.Should().Be("InProgress");
+    }
+
+    // ── Iteration 2: 200 with updated task on InProgress → Completed ──────────
+
+    [Fact]
+    public async Task UpdateStatus_returns_200_when_transitioning_to_Completed()
+    {
+        var service = Substitute.For<ITaskService>();
+        var expected = ResponseDto(status: "Completed");
+        service.UpdateStatusAsync(5, 3, WorkStatus.Completed).Returns(expected);
+
+        var result = await ControllerFactory.WithUser(service, userId: 3)
+            .UpdateStatus(5, Dto(WorkStatus.Completed)) as OkObjectResult;
+
+        result.Should().NotBeNull();
+        result!.StatusCode.Should().Be(200);
+        (result.Value as TaskResponseDto)!.Status.Should().Be("Completed");
+    }
+
+    // ── Iteration 3: 404 when task does not exist ─────────────────────────────
+
+    [Fact]
+    public async Task UpdateStatus_returns_404_when_task_does_not_exist()
+    {
+        var service = Substitute.For<ITaskService>();
+        service.UpdateStatusAsync(Arg.Any<int>(), Arg.Any<int>(), Arg.Any<WorkStatus>())
+            .Returns((TaskResponseDto?)null);
+
+        var result = await ControllerFactory.WithUser(service, userId: 3)
+            .UpdateStatus(99, Dto(WorkStatus.InProgress)) as ObjectResult;
+
+        result.Should().NotBeNull();
+        result!.StatusCode.Should().Be(404);
+    }
+
+    // ── Iteration 4: 403 when employee is not the assignee ───────────────────
+
+    [Fact]
+    public async Task UpdateStatus_returns_403_when_employee_is_not_the_assignee()
+    {
+        var service = Substitute.For<ITaskService>();
+        service.UpdateStatusAsync(Arg.Any<int>(), Arg.Any<int>(), Arg.Any<WorkStatus>())
+            .ThrowsAsync(new UnauthorizedAccessException("Only the assigned employee can update this task's status."));
+
+        var result = await ControllerFactory.WithUser(service, userId: 7)
+            .UpdateStatus(5, Dto(WorkStatus.InProgress)) as ObjectResult;
+
+        result.Should().NotBeNull();
+        result!.StatusCode.Should().Be(403);
+    }
+
+    // ── Iteration 5: 400 on invalid status transition ────────────────────────
+
+    [Fact]
+    public async Task UpdateStatus_returns_400_on_invalid_status_transition()
+    {
+        var service = Substitute.For<ITaskService>();
+        service.UpdateStatusAsync(Arg.Any<int>(), Arg.Any<int>(), Arg.Any<WorkStatus>())
+            .ThrowsAsync(new ArgumentException("Invalid status transition from Pending to Completed."));
+
+        var result = await ControllerFactory.WithUser(service, userId: 3)
+            .UpdateStatus(5, Dto(WorkStatus.Completed)) as ObjectResult;
+
+        result.Should().NotBeNull();
+        result!.StatusCode.Should().Be(400);
+    }
+
+    // ── Iteration 6: 401 when JWT has no NameIdentifier claim ────────────────
+
+    [Fact]
+    public async Task UpdateStatus_returns_401_when_user_id_claim_is_missing()
+    {
+        var service = Substitute.For<ITaskService>();
+
+        var result = await ControllerFactory.WithNoUserClaim(service)
+            .UpdateStatus(5, Dto(WorkStatus.InProgress)) as ObjectResult;
+
+        result.Should().NotBeNull();
+        result!.StatusCode.Should().Be(401);
+        await service.DidNotReceive()
+            .UpdateStatusAsync(Arg.Any<int>(), Arg.Any<int>(), Arg.Any<WorkStatus>());
+    }
+
+    // ── Iteration 7: user id from JWT is forwarded to service ────────────────
+
+    [Fact]
+    public async Task UpdateStatus_passes_user_id_from_jwt_claim_to_service()
+    {
+        var service = Substitute.For<ITaskService>();
+        service.UpdateStatusAsync(Arg.Any<int>(), Arg.Any<int>(), Arg.Any<WorkStatus>())
+            .Returns(ResponseDto());
+
+        await ControllerFactory.WithUser(service, userId: 3).UpdateStatus(5, Dto(WorkStatus.InProgress));
+
+        await service.Received(1).UpdateStatusAsync(5, 3, WorkStatus.InProgress);
+    }
+
+    // ── Iteration 8: ValidationProblem returned when ModelState is invalid ────
+
+    [Fact]
+    public async Task UpdateStatus_returns_ValidationProblemDetails_and_skips_service_when_model_is_invalid()
+    {
+        var service = Substitute.For<ITaskService>();
+        var controller = ControllerFactory.WithUser(service, userId: 3);
+        controller.ModelState.AddModelError("Status", "The Status field is required.");
+
+        var result = await controller.UpdateStatus(5, new UpdateTaskStatusDto()) as ObjectResult;
+
+        result.Should().NotBeNull();
+        result!.Value.Should().BeOfType<Microsoft.AspNetCore.Mvc.ValidationProblemDetails>();
+        await service.DidNotReceive()
+            .UpdateStatusAsync(Arg.Any<int>(), Arg.Any<int>(), Arg.Any<WorkStatus>());
+    }
+
+    // ── Iteration 9: response body Status field is a string, not an integer ───
+
+    [Fact]
+    public async Task UpdateStatus_response_status_field_is_a_string()
+    {
+        var service = Substitute.For<ITaskService>();
+        service.UpdateStatusAsync(5, 3, WorkStatus.InProgress)
+            .Returns(ResponseDto(status: "InProgress"));
+
+        var result = await ControllerFactory.WithUser(service, userId: 3)
+            .UpdateStatus(5, Dto(WorkStatus.InProgress)) as OkObjectResult;
+
+        var dto = result!.Value as TaskResponseDto;
+        dto!.Status.Should().BeOfType<string>();
+        dto.Status.Should().Be("InProgress");
     }
 }
 

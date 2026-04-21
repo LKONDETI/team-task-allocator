@@ -70,6 +70,30 @@ public class TaskService : ITaskService
         return await _taskRepository.DeleteAsync(taskId);
     }
 
+    public async Task<TaskResponseDto?> UpdateStatusAsync(int taskId, int requestingUserId, WorkStatus newStatus)
+    {
+        var task = await _taskRepository.GetByIdAsync(taskId);
+        if (task is null) return null;
+
+        // Only the assigned employee may update the status.
+        if (task.AssigneeId != requestingUserId)
+            throw new UnauthorizedAccessException("Only the assigned employee can update this task's status.");
+
+        // Enforce the allowed transition chain: Pending → InProgress → Completed.
+        var valid = (task.Status, newStatus) switch
+        {
+            (WorkStatus.Pending, WorkStatus.InProgress) => true,
+            (WorkStatus.InProgress, WorkStatus.Completed) => true,
+            _ => false
+        };
+
+        if (!valid)
+            throw new ArgumentException($"Invalid status transition from {task.Status} to {newStatus}.");
+
+        var updated = await _taskRepository.UpdateStatusAsync(taskId, newStatus);
+        return updated is null ? null : MapToDto(updated, updated.Assignee?.Name ?? string.Empty, updated.Manager?.Name ?? string.Empty);
+    }
+
     private static TaskResponseDto MapToDto(TaskEntity task, string assigneeName, string managerName) =>
         new()
         {
@@ -81,6 +105,7 @@ public class TaskService : ITaskService
             ManagerId = task.ManagerId,
             ManagerName = managerName,
             Deadline = task.Deadline,
+            Status = task.Status.ToString(),
             CreatedAt = task.CreatedAt,
             UpdatedAt = task.UpdatedAt
         };

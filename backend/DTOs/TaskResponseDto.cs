@@ -10,6 +10,7 @@ public class TaskResponseDto
     public int ManagerId { get; set; }
     public string ManagerName { get; set; } = string.Empty;
     public DateTime Deadline { get; set; }
+    public string Status { get; set; } = string.Empty;
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
 }
