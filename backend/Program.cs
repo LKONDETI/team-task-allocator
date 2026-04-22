@@ -21,6 +21,9 @@ builder.Services.AddControllers()
         // camelCase JSON serialization per API conventions in CLAUDE.md
         options.JsonSerializerOptions.PropertyNamingPolicy =
             System.Text.Json.JsonNamingPolicy.CamelCase;
+        // Serialize/deserialize enums as strings ("Pending", "InProgress", "Completed")
+        options.JsonSerializerOptions.Converters.Add(
+            new System.Text.Json.Serialization.JsonStringEnumConverter());
     });
 
 // ── OpenAPI / Swagger ─────────────────────────────────────────────────────────
