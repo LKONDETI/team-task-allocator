@@ -61,40 +61,27 @@ Status legend: ✅ Done | 🔄 In Progress | ⬜ Not Started
 
 ---
 
-## Phase 5 — Email Alerts (V2)
+## Phase 5 — Manager: Audit Log
 
 | # | Task | Status | Notes |
 |---|------|--------|-------|
-| 5.1 | Add `AlertSentAt` column to Task model + migration | ⬜ | Nullable DateTime |
-| 5.2 | SendGrid client setup + config | ⬜ | API key in `appsettings.json` / env var |
-| 5.3 | `IEmailService` + `SendGridEmailService` | ⬜ | Send task-due email |
-| 5.4 | `AlertBackgroundService` — hourly job | ⬜ | Query tasks due in <24h where `AlertSentAt` is null |
-| 5.5 | Mark `AlertSentAt` after send to prevent duplicates | ⬜ | Critical: send exactly once per task |
-| 5.6 | Tests for alert job — mock SendGrid, verify dedup | ⬜ | |
+| 5.1 | `AuditLog` model + migration | ⬜ | Fields: Id, Action, TargetId, ManagerId, Timestamp |
+| 5.2 | Log write on task create/delete/reassign | ⬜ | In `TaskService` |
+| 5.3 | Backend: `GET /api/audit` — manager only | ⬜ | Paginated, newest first |
+| 5.4 | Frontend: Audit log page/panel in ManagerDashboard | ⬜ | |
+| 5.5 | Tests for audit log | ⬜ | |
 
 ---
 
-## Phase 6 — Manager: Audit Log
+## Phase 6 — Polish & Hardening
 
 | # | Task | Status | Notes |
 |---|------|--------|-------|
-| 6.1 | `AuditLog` model + migration | ⬜ | Fields: Id, Action, TargetId, ManagerId, Timestamp |
-| 6.2 | Log write on task create/delete/reassign | ⬜ | In `TaskService` |
-| 6.3 | Backend: `GET /api/audit` — manager only | ⬜ | Paginated, newest first |
-| 6.4 | Frontend: Audit log page/panel in ManagerDashboard | ⬜ | |
-| 6.5 | Tests for audit log | ⬜ | |
-
----
-
-## Phase 7 — Polish & Hardening
-
-| # | Task | Status | Notes |
-|---|------|--------|-------|
-| 7.1 | Global error boundary in React | ⬜ | Catch unhandled render errors |
-| 7.2 | 401 interceptor in Axios client | ⬜ | Auto-logout on expired token |
-| 7.3 | Input validation on all backend DTOs | ⬜ | Use `[Required]`, `[MaxLength]` data annotations |
-| 7.4 | Rate limiting on auth endpoints | ⬜ | Prevent brute-force on `/api/auth/login` |
-| 7.5 | Responsive / mobile layout | ⬜ | Out of scope for V1, revisit in V2 |
+| 6.1 | Global error boundary in React | ⬜ | Catch unhandled render errors |
+| 6.2 | 401 interceptor in Axios client | ⬜ | Auto-logout on expired token |
+| 6.3 | Input validation on all backend DTOs | ⬜ | Use `[Required]`, `[MaxLength]` data annotations |
+| 6.4 | Rate limiting on auth endpoints | ⬜ | Prevent brute-force on `/api/auth/login` |
+| 6.5 | Responsive / mobile layout | ⬜ | Out of scope for V1, revisit in V2 |
 
 ---
 
