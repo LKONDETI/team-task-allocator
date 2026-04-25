@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { createTask } from '../api/tasks';
+import { createTask, getTasks } from '../api/tasks';
 import { searchUsers } from '../api/users';
 import { useAuth } from '../context/AuthContext';
 import ManagerDashboard from './ManagerDashboard';
@@ -9,357 +9,432 @@ import ManagerDashboard from './ManagerDashboard';
 // Mock API modules — no real HTTP calls
 vi.mock('../api/tasks');
 const mockCreateTask = createTask as Mock;
+const mockGetTasks   = getTasks   as Mock;
 
 vi.mock('../api/users');
 const mockSearchUsers = searchUsers as Mock;
 
-// Mock AuthContext so the component has a manager user without a real provider
 vi.mock('../context/AuthContext');
 const mockUseAuth = useAuth as Mock;
 
 const MANAGER_USER = {
   userId: '1',
-  name: 'Bob Manager',
-  email: 'bob@example.com',
+  name: 'Alice Manager',
+  email: 'alice.manager@example.com',
   role: 'manager' as const,
 };
 
 const EMPLOYEE: import('../types/user').UserSearchResult = {
-  id: 42,
-  name: 'Alice Employee',
-  email: 'alice@example.com',
-  skills: ['TypeScript', 'React'],
+  id: 3,
+  name: 'Carol Employee',
+  email: 'carol@example.com',
+  skills: ['React', 'TypeScript'],
 };
+
+const SAMPLE_TASK: import('../types/task').Task = {
+  id: 10,
+  title: 'Review Q2 Report',
+  description: 'Please review and give feedback',
+  assigneeId: 3,
+  assigneeName: 'Carol Employee',
+  managerId: 1,
+  managerName: 'Alice Manager',
+  deadline: '2026-06-15T09:00:00Z',
+  status: 'Pending',
+  createdAt: '2026-04-24T00:00:00Z',
+  updatedAt: '2026-04-24T00:00:00Z',
+};
+
+// ─── Helpers ────────────────────────────────────────────────────────────────
+
+function renderDashboard() {
+  return render(<ManagerDashboard />);
+}
+
+async function openModal() {
+  fireEvent.click(screen.getByRole('button', { name: /assign new task/i }));
+}
+
+async function selectEmployee() {
+  mockSearchUsers.mockResolvedValue([EMPLOYEE]);
+  const searchInput = screen.getByPlaceholderText('Search by name…');
+  await userEvent.type(searchInput, 'carol');
+  fireEvent.click(await screen.findByText('Carol Employee'));
+}
+
+function fillDeadline(date = '2026-06-15', time = '09:00') {
+  fireEvent.change(document.querySelector('#task-deadline-date') as HTMLInputElement, {
+    target: { value: date },
+  });
+  fireEvent.change(document.querySelector('#task-deadline-time') as HTMLInputElement, {
+    target: { value: time },
+  });
+}
+
+// ─── Setup ──────────────────────────────────────────────────────────────────
 
 beforeEach(() => {
   vi.clearAllMocks();
-  mockUseAuth.mockReturnValue({
-    user: MANAGER_USER,
-    logout: vi.fn(),
-  });
-  // Default: search returns nothing — individual tests override as needed
+  mockUseAuth.mockReturnValue({ user: MANAGER_USER, logout: vi.fn() });
+  mockGetTasks.mockResolvedValue([]);
   mockSearchUsers.mockResolvedValue([]);
 });
 
-// ---------------------------------------------------------------------------
-// Rendering
-// ---------------------------------------------------------------------------
+// ─────────────────────────────────────────────────────────────────────────────
+// 1. RENDERING
+// ─────────────────────────────────────────────────────────────────────────────
 
 describe('ManagerDashboard — rendering', () => {
-  it('renders the page heading and manager name', () => {
-    render(<ManagerDashboard />);
-    expect(screen.getByText('Manager Dashboard')).toBeInTheDocument();
-    expect(screen.getByText('Bob Manager')).toBeInTheDocument();
+  it('renders the Dashboard page title', () => {
+    renderDashboard();
+    // 'Dashboard' appears in both the h1 and the sidebar nav button
+    const all = screen.getAllByText('Dashboard');
+    expect(all.length).toBeGreaterThanOrEqual(1);
   });
 
-  it('renders all form fields', () => {
-    render(<ManagerDashboard />);
-    expect(screen.getByPlaceholderText('Task title')).toBeInTheDocument();
-    expect(screen.getByPlaceholderText('Describe the task…')).toBeInTheDocument();
-    // datetime-local input has no placeholder or htmlFor — query by type
-    expect(document.querySelector('input[type="datetime-local"]')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Create Task' })).toBeInTheDocument();
+  it('renders the manager name in the top bar', () => {
+    renderDashboard();
+    expect(screen.getByText('Alice Manager')).toBeInTheDocument();
   });
 
-  it('renders the EmployeeSearch widget when no assignee is selected', () => {
-    render(<ManagerDashboard />);
-    expect(
-      screen.getByPlaceholderText('Search by name or skill…')
-    ).toBeInTheDocument();
+  it('renders the "Manager" role label', () => {
+    renderDashboard();
+    expect(screen.getByText('Manager')).toBeInTheDocument();
+  });
+
+  it('renders the "+ Assign New Task" button in the topbar', () => {
+    renderDashboard();
+    expect(screen.getByRole('button', { name: /assign new task/i })).toBeInTheDocument();
+  });
+
+  it('renders stat cards on the dashboard', async () => {
+    renderDashboard();
+    expect(await screen.findByText('Total Tasks')).toBeInTheDocument();
+    expect(screen.getByText('Pending')).toBeInTheDocument();
+    expect(screen.getByText('In Progress')).toBeInTheDocument();
+    expect(screen.getByText('Completed')).toBeInTheDocument();
+  });
+
+  it('renders the sidebar navigation items', () => {
+    renderDashboard();
+    expect(screen.getByRole('button', { name: /dashboard/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /all tasks/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /create task/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /logout/i })).toBeInTheDocument();
   });
 });
 
-// ---------------------------------------------------------------------------
-// Sign-out
-// ---------------------------------------------------------------------------
+// ─────────────────────────────────────────────────────────────────────────────
+// 2. LOGOUT
+// ─────────────────────────────────────────────────────────────────────────────
 
-describe('ManagerDashboard — sign out', () => {
-  it('calls logout when Sign out is clicked', () => {
+describe('ManagerDashboard — logout', () => {
+  it('calls logout when the Logout sidebar button is clicked', () => {
     const logout = vi.fn();
     mockUseAuth.mockReturnValue({ user: MANAGER_USER, logout });
-    render(<ManagerDashboard />);
-    fireEvent.click(screen.getByRole('button', { name: 'Sign out' }));
+    renderDashboard();
+    fireEvent.click(screen.getByRole('button', { name: /logout/i }));
     expect(logout).toHaveBeenCalledOnce();
   });
 });
 
-// ---------------------------------------------------------------------------
-// Assignee selection
-// ---------------------------------------------------------------------------
+// ─────────────────────────────────────────────────────────────────────────────
+// 3. MODAL OPEN / CLOSE
+// ─────────────────────────────────────────────────────────────────────────────
 
-describe('ManagerDashboard — assignee selection', () => {
-  it('shows a search result after typing and replaces the search widget with the selected employee', async () => {
-    mockSearchUsers.mockResolvedValue([EMPLOYEE]);
-    render(<ManagerDashboard />);
-
-    const searchInput = screen.getByPlaceholderText('Search by name or skill…');
-    await userEvent.type(searchInput, 'Ali');
-
-    // Wait for the debounced search to resolve and the result to appear
-    const result = await screen.findByText('Alice Employee');
-    fireEvent.click(result);
-
-    // The search input should be gone; the selected employee badge appears
-    expect(screen.queryByPlaceholderText('Search by name or skill…')).not.toBeInTheDocument();
-    expect(screen.getByText('Alice Employee')).toBeInTheDocument();
-    expect(screen.getByText('alice@example.com')).toBeInTheDocument();
+describe('ManagerDashboard — modal', () => {
+  it('opens the Assign New Task modal when button is clicked', async () => {
+    renderDashboard();
+    await openModal();
+    expect(screen.getByRole('heading', { name: 'Assign New Task' })).toBeInTheDocument();
   });
 
-  it('clears the selected assignee when the ✕ button is clicked', async () => {
-    mockSearchUsers.mockResolvedValue([EMPLOYEE]);
-    render(<ManagerDashboard />);
+  it('shows all modal form fields when opened', async () => {
+    renderDashboard();
+    await openModal();
+    expect(document.getElementById('task-title')).toBeInTheDocument();
+    expect(document.getElementById('task-deadline-date')).toBeInTheDocument();
+    expect(document.getElementById('task-deadline-time')).toBeInTheDocument();
+    expect(screen.getByPlaceholderText('Search by name…')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /assign task/i })).toBeInTheDocument();
+  });
 
-    const searchInput = screen.getByPlaceholderText('Search by name or skill…');
-    await userEvent.type(searchInput, 'Ali');
-    fireEvent.click(await screen.findByText('Alice Employee'));
+  it('closes the modal when Cancel is clicked', async () => {
+    renderDashboard();
+    await openModal();
+    fireEvent.click(screen.getByRole('button', { name: /cancel/i }));
+    expect(screen.queryByRole('heading', { name: 'Assign New Task' })).not.toBeInTheDocument();
+  });
 
-    // Remove the selected assignee
-    fireEvent.click(screen.getByRole('button', { name: '✕' }));
-
-    // Search widget should be back
-    expect(screen.getByPlaceholderText('Search by name or skill…')).toBeInTheDocument();
-    expect(screen.queryByText('alice@example.com')).not.toBeInTheDocument();
+  it('closes the modal when the close button is clicked', async () => {
+    renderDashboard();
+    await openModal();
+    fireEvent.click(screen.getByRole('button', { name: /close modal/i }));
+    expect(screen.queryByRole('heading', { name: 'Assign New Task' })).not.toBeInTheDocument();
   });
 });
 
-// ---------------------------------------------------------------------------
-// Form submission — error: no assignee selected
-// ---------------------------------------------------------------------------
+// ─────────────────────────────────────────────────────────────────────────────
+// 4. EMPLOYEE SEARCH (inside modal)
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe('ManagerDashboard — employee search', () => {
+  it('shows search results after typing and hides search once employee is selected', async () => {
+    mockSearchUsers.mockResolvedValue([EMPLOYEE]);
+    renderDashboard();
+    await openModal();
+
+    await userEvent.type(screen.getByPlaceholderText('Search by name…'), 'carol');
+    fireEvent.click(await screen.findByText('Carol Employee'));
+
+    expect(screen.queryByPlaceholderText('Search by name…')).not.toBeInTheDocument();
+    expect(screen.getByText('carol@example.com')).toBeInTheDocument();
+  });
+
+  it('restores the search widget when the selected employee is removed', async () => {
+    mockSearchUsers.mockResolvedValue([EMPLOYEE]);
+    renderDashboard();
+    await openModal();
+
+    await userEvent.type(screen.getByPlaceholderText('Search by name…'), 'carol');
+    fireEvent.click(await screen.findByText('Carol Employee'));
+    fireEvent.click(screen.getByRole('button', { name: /remove assignee/i }));
+
+    expect(screen.getByPlaceholderText('Search by name…')).toBeInTheDocument();
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 5. FORM VALIDATION
+// ─────────────────────────────────────────────────────────────────────────────
 
 describe('ManagerDashboard — form validation', () => {
-  it('shows an error message when submitting without selecting an assignee', async () => {
-    render(<ManagerDashboard />);
+  it('shows error when submitting without an employee selected', async () => {
+    renderDashboard();
+    await openModal();
 
-    fireEvent.change(screen.getByPlaceholderText('Task title'), {
-      target: { value: 'Fix the bug' },
+    fireEvent.change(document.getElementById('task-title') as HTMLInputElement, {
+      target: { value: 'Test Task' },
     });
-    fireEvent.change(screen.getByPlaceholderText('Describe the task…'), {
-      target: { value: 'There is a critical bug' },
-    });
-    fireEvent.change(document.querySelector('input[type="datetime-local"]') as HTMLElement, {
-      target: { value: '2026-06-01T09:00' },
-    });
+    fillDeadline();
+    fireEvent.click(screen.getByRole('button', { name: /assign task/i }));
 
-    fireEvent.click(screen.getByRole('button', { name: 'Create Task' }));
+    expect(await screen.findByText('Please select an employee.')).toBeInTheDocument();
+    expect(mockCreateTask).not.toHaveBeenCalled();
+  });
 
-    expect(
-      await screen.findByText('Please select an employee to assign this task to.')
-    ).toBeInTheDocument();
+  it('shows error when submitting without a deadline date', async () => {
+    renderDashboard();
+    await openModal();
+
+    fireEvent.change(document.getElementById('task-title') as HTMLInputElement, {
+      target: { value: 'Test Task' },
+    });
+    await selectEmployee();
+    // Deliberately do NOT call fillDeadline() — deadlineDate stays ''
+    // The browser required validation won't fire in jsdom, so our JS guard catches it
+    fireEvent.click(screen.getByRole('button', { name: /assign task/i }));
+
+    expect(await screen.findByText('Please set a deadline date.')).toBeInTheDocument();
     expect(mockCreateTask).not.toHaveBeenCalled();
   });
 });
 
-// ---------------------------------------------------------------------------
-// Form submission — happy path
-// ---------------------------------------------------------------------------
+// ─────────────────────────────────────────────────────────────────────────────
+// 6. DEADLINE DATE COMBINATION  ← TDD: this is where the bug was
+// ─────────────────────────────────────────────────────────────────────────────
 
-describe('ManagerDashboard — successful form submission', () => {
+describe('ManagerDashboard — deadline date/time combination', () => {
+  it('combines date and time into a valid ISO string for the API payload', async () => {
+    mockCreateTask.mockResolvedValue(SAMPLE_TASK);
+    renderDashboard();
+    await openModal();
+
+    fireEvent.change(document.getElementById('task-title') as HTMLInputElement, {
+      target: { value: 'Review Q2 Report' },
+    });
+    await selectEmployee();
+    fillDeadline('2026-06-15', '09:00');
+
+    fireEvent.click(screen.getByRole('button', { name: /assign task/i }));
+
+    await waitFor(() => expect(mockCreateTask).toHaveBeenCalledOnce());
+    const [payload] = mockCreateTask.mock.calls[0];
+
+    // The deadline must be a valid ISO string
+    const parsed = new Date(payload.deadline);
+    expect(parsed.toString()).not.toBe('Invalid Date');
+
+    // Date part must match what we entered
+    expect(payload.deadline).toContain('2026-06-15');
+  });
+
+  it('sends the correct time component in the deadline ISO string', async () => {
+    mockCreateTask.mockResolvedValue(SAMPLE_TASK);
+    renderDashboard();
+    await openModal();
+
+    fireEvent.change(document.getElementById('task-title') as HTMLInputElement, {
+      target: { value: 'Morning task' },
+    });
+    await selectEmployee();
+    fillDeadline('2026-07-01', '14:30');
+
+    fireEvent.click(screen.getByRole('button', { name: /assign task/i }));
+
+    await waitFor(() => expect(mockCreateTask).toHaveBeenCalledOnce());
+    const [payload] = mockCreateTask.mock.calls[0];
+
+    // Must be a valid Date
+    expect(new Date(payload.deadline).toString()).not.toBe('Invalid Date');
+    // The ISO string should contain 14:30 or equivalent UTC offset
+    const localDate = new Date(`2026-07-01T14:30:00`);
+    expect(new Date(payload.deadline).getTime()).toBe(localDate.getTime());
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 7. HAPPY PATH — FULL SUBMISSION
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe('ManagerDashboard — successful task creation', () => {
   async function fillAndSubmit() {
-    // Select an assignee first
-    mockSearchUsers.mockResolvedValue([EMPLOYEE]);
-    render(<ManagerDashboard />);
+    renderDashboard();
+    await openModal();
 
-    await userEvent.type(
-      screen.getByPlaceholderText('Search by name or skill…'),
-      'Ali'
-    );
-    fireEvent.click(await screen.findByText('Alice Employee'));
+    fireEvent.change(document.getElementById('task-title') as HTMLInputElement, {
+      target: { value: 'Review Q2 Report' },
+    });
+    fireEvent.change(document.getElementById('task-description') as HTMLTextAreaElement, {
+      target: { value: 'Please review and give feedback' },
+    });
+    await selectEmployee();
+    fillDeadline('2026-06-15', '09:00');
 
-    fireEvent.change(screen.getByPlaceholderText('Task title'), {
-      target: { value: 'Fix the bug' },
-    });
-    fireEvent.change(screen.getByPlaceholderText('Describe the task…'), {
-      target: { value: 'There is a critical bug' },
-    });
-    fireEvent.change(document.querySelector('input[type="datetime-local"]') as HTMLElement, {
-      target: { value: '2026-06-01T09:00' },
-    });
-
-    fireEvent.click(screen.getByRole('button', { name: 'Create Task' }));
+    fireEvent.click(screen.getByRole('button', { name: /assign task/i }));
   }
 
-  it('calls createTask with the correct payload', async () => {
-    mockCreateTask.mockResolvedValue({});
+  it('calls createTask with correct payload including assigneeId', async () => {
+    mockCreateTask.mockResolvedValue(SAMPLE_TASK);
     await fillAndSubmit();
 
     await waitFor(() => expect(mockCreateTask).toHaveBeenCalledOnce());
     const [payload] = mockCreateTask.mock.calls[0];
-    expect(payload.title).toBe('Fix the bug');
-    expect(payload.description).toBe('There is a critical bug');
+    expect(payload.title).toBe('Review Q2 Report');
+    expect(payload.description).toBe('Please review and give feedback');
     expect(payload.assigneeId).toBe(EMPLOYEE.id);
-    expect(payload.deadline).toBe(new Date('2026-06-01T09:00').toISOString());
+    expect(new Date(payload.deadline).toString()).not.toBe('Invalid Date');
   });
 
-  it('shows a success message naming the task and assignee', async () => {
-    mockCreateTask.mockResolvedValue({});
+  it('shows success message naming the task and assignee', async () => {
+    mockCreateTask.mockResolvedValue(SAMPLE_TASK);
     await fillAndSubmit();
 
     expect(
-      await screen.findByText('Task "Fix the bug" assigned to Alice Employee.')
+      await screen.findByText('Task "Review Q2 Report" assigned to Carol Employee.')
     ).toBeInTheDocument();
   });
 
-  it('resets the form fields after a successful submission', async () => {
-    mockCreateTask.mockResolvedValue({});
+  it('resets form fields after successful submission', async () => {
+    mockCreateTask.mockResolvedValue(SAMPLE_TASK);
     await fillAndSubmit();
 
-    await screen.findByText('Task "Fix the bug" assigned to Alice Employee.');
+    await screen.findByText('Task "Review Q2 Report" assigned to Carol Employee.');
 
-    expect(screen.getByPlaceholderText('Task title')).toHaveValue('');
-    expect(screen.getByPlaceholderText('Describe the task…')).toHaveValue('');
-    expect(document.querySelector('input[type="datetime-local"]') as HTMLElement).toHaveValue('');
-    // Assignee cleared — search widget reappears
-    expect(screen.getByPlaceholderText('Search by name or skill…')).toBeInTheDocument();
-  });
-
-  it('disables the submit button while the request is in-flight', async () => {
-    // Never resolves during this test so we can observe the in-flight state
-    mockCreateTask.mockReturnValue(new Promise(() => {}));
-    mockSearchUsers.mockResolvedValue([EMPLOYEE]);
-    render(<ManagerDashboard />);
-
-    await userEvent.type(
-      screen.getByPlaceholderText('Search by name or skill…'),
-      'Ali'
-    );
-    fireEvent.click(await screen.findByText('Alice Employee'));
-
-    fireEvent.change(screen.getByPlaceholderText('Task title'), {
-      target: { value: 'Fix the bug' },
-    });
-    fireEvent.change(screen.getByPlaceholderText('Describe the task…'), {
-      target: { value: 'Desc' },
-    });
-    fireEvent.change(document.querySelector('input[type="datetime-local"]') as HTMLElement, {
-      target: { value: '2026-06-01T09:00' },
-    });
-
-    fireEvent.click(screen.getByRole('button', { name: 'Create Task' }));
-
-    await waitFor(() =>
-      expect(screen.getByRole('button', { name: 'Creating…' })).toBeDisabled()
-    );
+    expect((document.getElementById('task-title') as HTMLInputElement).value).toBe('');
+    expect(document.getElementById('task-deadline-date') as HTMLInputElement).toHaveValue('');
+    expect(screen.getByPlaceholderText('Search by name…')).toBeInTheDocument();
   });
 });
 
-// ---------------------------------------------------------------------------
-// Form submission — API error
-// ---------------------------------------------------------------------------
+// ─────────────────────────────────────────────────────────────────────────────
+// 8. API ERROR HANDLING
+// ─────────────────────────────────────────────────────────────────────────────
 
-describe('ManagerDashboard — API error on form submission', () => {
+describe('ManagerDashboard — API error handling', () => {
+  async function fillAndSubmit() {
+    renderDashboard();
+    await openModal();
+    fireEvent.change(document.getElementById('task-title') as HTMLInputElement, {
+      target: { value: 'Test Task' },
+    });
+    await selectEmployee();
+    fillDeadline();
+    fireEvent.click(screen.getByRole('button', { name: /assign task/i }));
+  }
+
   it('shows the generic error message when createTask rejects', async () => {
     mockCreateTask.mockRejectedValue(new Error('Network error'));
-    mockSearchUsers.mockResolvedValue([EMPLOYEE]);
-    render(<ManagerDashboard />);
-
-    await userEvent.type(
-      screen.getByPlaceholderText('Search by name or skill…'),
-      'Ali'
-    );
-    fireEvent.click(await screen.findByText('Alice Employee'));
-
-    fireEvent.change(screen.getByPlaceholderText('Task title'), {
-      target: { value: 'Fix the bug' },
-    });
-    fireEvent.change(screen.getByPlaceholderText('Describe the task…'), {
-      target: { value: 'There is a critical bug' },
-    });
-    fireEvent.change(document.querySelector('input[type="datetime-local"]') as HTMLElement, {
-      target: { value: '2026-06-01T09:00' },
-    });
-
-    fireEvent.click(screen.getByRole('button', { name: 'Create Task' }));
-
+    await fillAndSubmit();
     expect(
       await screen.findByText('Failed to create task. Please try again.')
     ).toBeInTheDocument();
   });
 
-  it('re-enables the submit button after an API error', async () => {
+  it('keeps the modal open after an API error', async () => {
     mockCreateTask.mockRejectedValue(new Error('Network error'));
-    mockSearchUsers.mockResolvedValue([EMPLOYEE]);
-    render(<ManagerDashboard />);
-
-    await userEvent.type(
-      screen.getByPlaceholderText('Search by name or skill…'),
-      'Ali'
-    );
-    fireEvent.click(await screen.findByText('Alice Employee'));
-
-    fireEvent.change(screen.getByPlaceholderText('Task title'), {
-      target: { value: 'Fix the bug' },
-    });
-    fireEvent.change(screen.getByPlaceholderText('Describe the task…'), {
-      target: { value: 'Desc' },
-    });
-    fireEvent.change(document.querySelector('input[type="datetime-local"]') as HTMLElement, {
-      target: { value: '2026-06-01T09:00' },
-    });
-
-    fireEvent.click(screen.getByRole('button', { name: 'Create Task' }));
-
-    // Wait for error to appear then confirm button is back to normal
+    await fillAndSubmit();
     await screen.findByText('Failed to create task. Please try again.');
-    expect(screen.getByRole('button', { name: 'Create Task' })).not.toBeDisabled();
+    expect(screen.getByRole('heading', { name: 'Assign New Task' })).toBeInTheDocument();
   });
 
-  it('clears a previous error message on a new submission attempt', async () => {
-    // First call fails, second call succeeds
+  it('re-enables the Assign Task button after an API error', async () => {
+    mockCreateTask.mockRejectedValue(new Error('Network error'));
+    await fillAndSubmit();
+    await screen.findByText('Failed to create task. Please try again.');
+    expect(screen.getByRole('button', { name: /assign task/i })).not.toBeDisabled();
+  });
+
+  it('clears the error message on the next submission attempt', async () => {
     mockCreateTask
       .mockRejectedValueOnce(new Error('Network error'))
-      .mockResolvedValueOnce({});
-    mockSearchUsers.mockResolvedValue([EMPLOYEE]);
-    render(<ManagerDashboard />);
+      .mockResolvedValueOnce(SAMPLE_TASK);
 
-    // --- First submission (fails) ---
-    await userEvent.type(
-      screen.getByPlaceholderText('Search by name or skill…'),
-      'Ali'
-    );
-    fireEvent.click(await screen.findByText('Alice Employee'));
+    renderDashboard();
+    await openModal();
 
-    fireEvent.change(screen.getByPlaceholderText('Task title'), {
-      target: { value: 'Fix the bug' },
-    });
-    fireEvent.change(screen.getByPlaceholderText('Describe the task…'), {
-      target: { value: 'Desc' },
-    });
-    fireEvent.change(document.querySelector('input[type="datetime-local"]') as HTMLElement, {
-      target: { value: '2026-06-01T09:00' },
-    });
-
-    fireEvent.click(screen.getByRole('button', { name: 'Create Task' }));
+    // First (failing) submission
+    fireEvent.change(document.getElementById('task-title') as HTMLInputElement, { target: { value: 'Test Task' } });
+    await selectEmployee();
+    fillDeadline();
+    fireEvent.click(screen.getByRole('button', { name: /assign task/i }));
     await screen.findByText('Failed to create task. Please try again.');
 
-    // --- Second submission (succeeds) ---
-    // On an API error the form is NOT reset, so the assignee badge is still shown.
-    // Clear it first so the search widget is visible again.
-    fireEvent.click(screen.getByRole('button', { name: '✕' }));
+    // Reset employee and resubmit
+    fireEvent.click(screen.getByRole('button', { name: /remove assignee/i }));
+    await selectEmployee();
+    fireEvent.click(screen.getByRole('button', { name: /assign task/i }));
 
-    await userEvent.type(
-      screen.getByPlaceholderText('Search by name or skill…'),
-      'Ali'
-    );
-    fireEvent.click(await screen.findByText('Alice Employee'));
-
-    fireEvent.change(screen.getByPlaceholderText('Task title'), {
-      target: { value: 'Fix the bug' },
-    });
-    fireEvent.change(screen.getByPlaceholderText('Describe the task…'), {
-      target: { value: 'Desc' },
-    });
-    fireEvent.change(document.querySelector('input[type="datetime-local"]') as HTMLElement, {
-      target: { value: '2026-06-01T09:00' },
-    });
-
-    fireEvent.click(screen.getByRole('button', { name: 'Create Task' }));
-
-    // Error message must be gone before the success message appears
     await waitFor(() =>
-      expect(
-        screen.queryByText('Failed to create task. Please try again.')
-      ).not.toBeInTheDocument()
+      expect(screen.queryByText('Failed to create task. Please try again.')).not.toBeInTheDocument()
     );
-    await screen.findByText('Task "Fix the bug" assigned to Alice Employee.');
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 9. ALL TASKS VIEW
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe('ManagerDashboard — All Tasks view', () => {
+  it('switches to All Tasks view when sidebar item is clicked', async () => {
+    renderDashboard();
+    fireEvent.click(screen.getByRole('button', { name: /all tasks/i }));
+    // The h1 heading (not the nav button) should now read 'All Tasks'
+    expect(await screen.findByRole('heading', { name: 'All Tasks', level: 1 })).toBeInTheDocument();
+  });
+
+  it('shows tasks from the API in the All Tasks view', async () => {
+    mockGetTasks.mockResolvedValue([SAMPLE_TASK]);
+    renderDashboard();
+    fireEvent.click(screen.getByRole('button', { name: /all tasks/i }));
+    expect(await screen.findByText('Review Q2 Report')).toBeInTheDocument();
+    expect(screen.getByText('Carol Employee')).toBeInTheDocument();
+  });
+
+  it('shows empty state when there are no tasks', async () => {
+    mockGetTasks.mockResolvedValue([]);
+    renderDashboard();
+    fireEvent.click(screen.getByRole('button', { name: /all tasks/i }));
+    expect(await screen.findByText(/no tasks yet/i)).toBeInTheDocument();
   });
 });

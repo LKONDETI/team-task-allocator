@@ -503,3 +503,73 @@ code {
 @keyframes tf-spin {
   to { transform: rotate(360deg); }
 }
+
+/* ─────────────────────────────────────────────────────────────────────
+   Manager Portal — specific classes
+   ───────────────────────────────────────────────────────────────────── */
+
+/* Two-column dashboard layout */
+.mgr-two-col {
+  display: grid;
+  grid-template-columns: 1fr 300px;
+  gap: 20px;
+  align-items: start;
+}
+
+@media (max-width: 960px) {
+  .mgr-two-col { grid-template-columns: 1fr; }
+}
+
+/* Upcoming deadlines panel */
+.mgr-deadlines-panel {
+  background: #fff;
+  border-radius: 16px;
+  border: 1px solid #e8eaf0;
+  overflow: hidden;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+}
+
+/* Modal form inputs */
+.mgr-label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.mgr-input {
+  width: 100%;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-size: 13.5px;
+  color: #111827;
+  background: #fff;
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  box-sizing: border-box;
+  font-family: 'Inter', system-ui, sans-serif;
+}
+
+.mgr-input:focus {
+  border-color: #6366f1;
+  box-shadow: 0 0 0 3px rgba(99,102,241,0.12);
+}
+
+.mgr-input::placeholder { color: #9ca3af; }
+
+/* EmployeeSearch — light theme overrides (used inside modal) */
+.mgr-employee-search input {
+  background: #fff;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 10px;
+  color: #111827;
+}
+
+.mgr-employee-search input:focus {
+  border-color: #6366f1;
+  box-shadow: 0 0 0 3px rgba(99,102,241,0.12);
+}
