@@ -44,7 +44,8 @@ export default function ManagerDashboard() {
   // Form state
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [deadline, setDeadline] = useState('');
+  const [deadlineDate, setDeadlineDate] = useState('');
+  const [deadlineTime, setDeadlineTime] = useState('09:00');
   const [assignee, setAssignee] = useState<UserSearchResult | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [successMsg, setSuccessMsg] = useState('');
@@ -65,13 +66,14 @@ export default function ManagerDashboard() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!assignee) { setErrorMsg('Please select an employee.'); return; }
+    if (!deadlineDate) { setErrorMsg('Please set a deadline date.'); return; }
     setIsSubmitting(true);
     setSuccessMsg('');
     setErrorMsg('');
     try {
-      await createTask({ title, description, assigneeId: assignee.id, deadline: new Date(deadline).toISOString() });
+      await createTask({ title, description, assigneeId: assignee.id, deadline: new Date(`${deadlineDate}T${deadlineTime}:00`).toISOString() });
       setSuccessMsg(`Task "${title}" assigned to ${assignee.name}.`);
-      setTitle(''); setDescription(''); setDeadline(''); setAssignee(null);
+      setTitle(''); setDescription(''); setDeadlineDate(''); setDeadlineTime('09:00'); setAssignee(null);
       loadTasks();
       setTimeout(() => { setShowModal(false); setSuccessMsg(''); }, 1800);
     } catch {
@@ -342,7 +344,7 @@ export default function ManagerDashboard() {
               {/* Modal header */}
               <div className="flex items-center justify-between px-6 py-5 border-b border-gray-100">
                 <h3 className="text-base font-bold text-gray-900">Assign New Task</h3>
-                <button onClick={closeModal} className="w-7 h-7 rounded-full flex items-center justify-center text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors">✕</button>
+                <button onClick={closeModal} aria-label="Close modal" className="w-7 h-7 rounded-full flex items-center justify-center text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors">✕</button>
               </div>
 
               <form onSubmit={handleSubmit} className="px-6 py-5 space-y-4">
@@ -374,7 +376,7 @@ export default function ManagerDashboard() {
                         <p className="text-sm font-semibold text-emerald-800 truncate">{assignee.name}</p>
                         <p className="text-xs text-emerald-600 truncate">{assignee.email}</p>
                       </div>
-                      <button type="button" onClick={() => setAssignee(null)}
+                      <button type="button" aria-label="Remove assignee" onClick={() => setAssignee(null)}
                         className="text-emerald-500 hover:text-emerald-700 p-1 rounded-md hover:bg-emerald-100 transition-colors">
                         <svg style={{width:14,height:14}} fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -386,11 +388,34 @@ export default function ManagerDashboard() {
                   )}
                 </div>
 
-                {/* Deadline */}
+
+                {/* Deadline — split into Date + Time for reliable cross-browser input */}
                 <div>
                   <label className="mgr-label">Deadline *</label>
-                  <input id="task-deadline" type="datetime-local" required value={deadline} onChange={e => setDeadline(e.target.value)}
-                    className="mgr-input" />
+                  <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:10}}>
+                    <div>
+                      <p style={{fontSize:11,color:'#6b7280',marginBottom:4,fontWeight:500}}>Date</p>
+                      <input
+                        id="task-deadline-date"
+                        type="date"
+                        value={deadlineDate}
+                        min={new Date().toISOString().split('T')[0]}
+                        onChange={e => setDeadlineDate(e.target.value)}
+                        className="mgr-input"
+                      />
+                    </div>
+                    <div>
+                      <p style={{fontSize:11,color:'#6b7280',marginBottom:4,fontWeight:500}}>Time</p>
+                      <input
+                        id="task-deadline-time"
+                        type="time"
+                        required
+                        value={deadlineTime}
+                        onChange={e => setDeadlineTime(e.target.value)}
+                        className="mgr-input"
+                      />
+                    </div>
+                  </div>
                 </div>
 
                 {/* Messages */}
