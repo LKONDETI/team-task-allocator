@@ -409,6 +409,11 @@ export default function EmployeeDashboard() {
                   center: 'title',
                   right: '',
                 }}
+                eventClassNames="cursor-pointer"
+                eventClick={(info) => {
+                  const task = displayTasks.find((t) => String(t.id) === info.event.id);
+                  if (task) setSelectedTask(task);
+                }}
               />
             </div>
           </div>
