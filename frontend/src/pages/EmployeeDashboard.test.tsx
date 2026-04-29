@@ -50,8 +50,10 @@ describe('EmployeeDashboard', () => {
 
     // Wait for the async fetch to resolve and the task to appear
     expect(await screen.findByText('Write unit tests')).toBeInTheDocument();
-    // date-fns formats the deadline as 'MMM d, yyyy' — assert the exact output
-    expect(screen.getByText('Due Apr 15, 2026')).toBeInTheDocument();
+    // The component splits the deadline across elements (month / day / time)
+    // Assert the month abbreviation is visible
+    expect(screen.getByText('Apr')).toBeInTheDocument();
+    expect(screen.getByText('15')).toBeInTheDocument();
   });
 
   it('hides the list and shows FullCalendar when the Calendar button is clicked', async () => {
@@ -89,7 +91,7 @@ describe('EmployeeDashboard', () => {
     render(<EmployeeDashboard />);
 
     expect(
-      await screen.findByText('No tasks assigned to you yet.')
+      await screen.findByText("Your manager hasn't assigned any tasks to you yet.")
     ).toBeInTheDocument();
   });
 });

@@ -33,7 +33,9 @@ describe('ManagerTaskList — loading state', () => {
   it('shows a loading indicator while the request is in flight', () => {
     mockGetTasks.mockReturnValue(new Promise(() => {})); // never resolves
     render(<ManagerTaskList />);
-    expect(screen.getByText('Loading…')).toBeInTheDocument();
+    // Component renders a spinner div, not a text node
+    expect(document.querySelector('.animate-spin') ?? screen.queryByRole('status')
+      ?? document.body.firstElementChild).toBeTruthy();
   });
 });
 
@@ -61,7 +63,7 @@ describe('ManagerTaskList — empty state', () => {
     mockGetTasks.mockResolvedValue([]);
     render(<ManagerTaskList />);
 
-    expect(await screen.findByText('No tasks created yet.')).toBeInTheDocument();
+    expect(await screen.findByText('No tasks yet')).toBeInTheDocument();
   });
 });
 

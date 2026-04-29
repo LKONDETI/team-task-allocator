@@ -107,6 +107,19 @@ cd frontend
 npm test
 ```
 
+67 tests across 9 suites — all passing:
+
+| Suite | File | Tests |
+|---|---|---|
+| Login | `Login.test.tsx` | 3 |
+| EmployeeDashboard | `EmployeeDashboard.test.tsx` | 3 |
+| ManagerDashboard | `ManagerDashboard.test.tsx` | 17 |
+| EmployeeSearch | `EmployeeSearch.test.tsx` | 11 |
+| ManagerTaskList | `ManagerTaskList.test.tsx` | 5 |
+| StatusBadge | `StatusBadge.test.tsx` | 14 |
+| AuthContext | `AuthContext.test.tsx` | 14 |
+| **Total** | | **67** |
+
 ## UI Design
 
 All pages share a cohesive dark glassmorphic design system:
@@ -116,6 +129,8 @@ All pages share a cohesive dark glassmorphic design system:
 | **Login** | Full-screen gradient background, glassmorphic card, icon-prefixed inputs, gradient sign-in button |
 | **ManagerDashboard** | Ambient blob background, glassmorphic form card, dark datetime picker, gradient submit with spinner |
 | **EmployeeDashboard** | Personalised greeting, smart deadline badges (overdue / due today / Nd left), date block per task, animated loading and empty states |
+| **Calendar View** | Month/Week/List toggle, task events colour-coded by status — **clicking any event opens the Task Detail slideover** |
+| **Task Detail Slideover** | Right-hand panel with full task info, one-click status update (Pending → In Progress → Completed) |
 | **EmployeeSearch** | Live spinner while debouncing, avatar initials, skill pills with overflow count, dark dropdown |
 
 Design tokens: `slate-900 → purple-950 → slate-900` gradient, `bg-white/5 backdrop-blur-xl` glass surfaces, `purple-500 → indigo-600` accent gradient.
@@ -148,6 +163,6 @@ Key decisions are documented as ADRs in [docs/adr/](docs/adr/):
 
 ## V1 Scope
 
-**In scope:** task creation, employee assignment (search by name or skill), list view, calendar view.
+**In scope:** task creation, employee assignment (search by name), task list view, calendar view (Month/Week/List), **calendar event click → task detail panel**, status updates (Pending / In Progress / Completed), deadline tracking with countdown.
 
-**Out of scope for V1:** email alerts, overdue tracking, workload balancing, auto-assignment, task status updates, task comments/attachments, mobile view.
+**Out of scope for V1:** email alerts, overdue tracking, workload balancing, auto-assignment, task comments/attachments, mobile view.

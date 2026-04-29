@@ -125,14 +125,14 @@ describe('EmployeeSearch — results dropdown', () => {
     expect(screen.getByText('Bob Dev')).toBeInTheDocument();
   });
 
-  it('shows "No employees found." when search returns an empty array', async () => {
+  it('shows a "No employees found" message when search returns an empty array', async () => {
     mockSearchUsers.mockResolvedValue([]);
     render(<EmployeeSearch onSelect={vi.fn()} />);
 
     typeIntoSearch('xyz');
     await flushDebounce();
 
-    expect(screen.getByText('No employees found.')).toBeInTheDocument();
+    expect(screen.getByText(/no employees found/i)).toBeInTheDocument();
   });
 
   it('hides the dropdown when the input is cleared', async () => {
@@ -193,6 +193,6 @@ describe('EmployeeSearch — API error', () => {
     await flushDebounce();
 
     expect(screen.queryByText('Alice Employee')).not.toBeInTheDocument();
-    expect(screen.queryByText('No employees found.')).not.toBeInTheDocument();
+    expect(screen.queryByText(/no employees found/i)).not.toBeInTheDocument();
   });
 });
