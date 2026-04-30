@@ -32,7 +32,7 @@ afterEach(() => {
 });
 
 function getInput() {
-  return screen.getByPlaceholderText('Search by name or skill…');
+  return screen.getByPlaceholderText('Search by name…');
 }
 
 // Simulates typing into the search field (synchronous, no timer conflicts)

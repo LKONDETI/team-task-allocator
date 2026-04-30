@@ -81,13 +81,6 @@ describe('EmployeeDashboard — task list', () => {
     mockGetMyTasks.mockResolvedValue([TASK]);
     render(<EmployeeDashboard />);
     expect(await screen.findByText('Write unit tests')).toBeInTheDocument();
-<<<<<<< HEAD
-    // The component splits the deadline across elements (month / day / time)
-    // Assert the month abbreviation is visible
-    expect(screen.getByText('Apr')).toBeInTheDocument();
-    expect(screen.getByText('15')).toBeInTheDocument();
-=======
->>>>>>> refs/remotes/origin/master
   });
 
   it('renders the formatted deadline date', async () => {
@@ -117,8 +110,11 @@ describe('EmployeeDashboard — task list', () => {
     mockGetMyTasks.mockResolvedValue([TASK]);
     render(<EmployeeDashboard />);
     fireEvent.click(await screen.findByText('Write unit tests'));
+    // Panel heading is visible
     expect(await screen.findByText('Task Details')).toBeInTheDocument();
-    expect(screen.getByText('Bob Manager')).toBeInTheDocument();
+    // The aside should NOT have translate-x-full (i.e. it is slid in)
+    const panel = document.querySelector('aside')!;
+    expect(panel.className).not.toContain('translate-x-full');
   });
 
   it('closes the task detail panel when the close button is clicked', async () => {
@@ -127,9 +123,11 @@ describe('EmployeeDashboard — task list', () => {
     fireEvent.click(await screen.findByText('Write unit tests'));
     await screen.findByText('Task Details');
     fireEvent.click(screen.getByRole('button', { name: /close panel/i }));
-    await waitFor(() =>
-      expect(screen.queryByText('Task Details')).not.toBeInTheDocument()
-    );
+    // Panel slides out via CSS — the aside gets translate-x-full, stays in DOM
+    await waitFor(() => {
+      const panel = document.querySelector('aside.fixed')!;
+      expect(panel.className).toContain('translate-x-full');
+    });
   });
 });
 
@@ -196,12 +194,13 @@ describe('EmployeeDashboard — calendar view', () => {
     mockGetMyTasks.mockResolvedValue([TASK]);
     await switchToCalendar();
 
-    // id '999' doesn't match any task
+    // id '999' doesn't match any task — panel should stay slid out
     capturedEventClick!({ event: { id: '999' } });
 
-    await waitFor(() =>
-      expect(screen.queryByText('Task Details')).not.toBeInTheDocument()
-    );
+    await waitFor(() => {
+      const panel = document.querySelector('aside.fixed')!;
+      expect(panel.className).toContain('translate-x-full');
+    });
   });
 
   it('closes the slideover after opening via calendar click', async () => {
@@ -212,9 +211,11 @@ describe('EmployeeDashboard — calendar view', () => {
     await screen.findByText('Task Details');
 
     fireEvent.click(screen.getByRole('button', { name: /close panel/i }));
-    await waitFor(() =>
-      expect(screen.queryByText('Task Details')).not.toBeInTheDocument()
-    );
+    // Panel slides out via CSS — aside gets translate-x-full
+    await waitFor(() => {
+      const panel = document.querySelector('aside.fixed')!;
+      expect(panel.className).toContain('translate-x-full');
+    });
   });
 });
 
